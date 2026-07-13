@@ -1,63 +1,66 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import * as Papa from "papaparse";
 import * as XLSX from "xlsx";
+import Dashboard from "../dashboard/page";
 
 type Product = {
   id: number;
-  Artikel: string;
-  Deskripsi: string;
+  sku: string;
+  deskripsi: string;
   Harga: number;
   Dimensi: number;
   created_at?: string;
 };
 
-export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>([]);
+export default function ProductPage() {
+  const router = useRouter();
+  const [product, setProduct] = useState<Product[]>([]);
 
-  const [Artikel, setArtikel] = useState("");
-  const [Deskripsi, setDeskripsi] = useState("");
+  const [sku, setsku] = useState("");
+  const [deskripsi, setdeskripsi] = useState("");
   const [Harga, setHarga] = useState<number>(0);
   const [Dimensi, setDimensi] = useState<number>(0);
 
   /* ================= LOAD ================= */
-  async function loadProducts() {
+  async function loadProduct() {
     const { data, error } = await supabase
-      .from("products")
+      .from("product")
       .select("*")
       .order("id", { ascending: true });
 
     if (error) {
       console.error(error);
-      setProducts([]);
+      setProduct([]);
       return;
     }
 
-    setProducts(data ?? []);
+    setProduct(data ?? []);
   }
 
   /* ================= ADD ================= */
   async function addProduct() {
-    if (!Artikel || !Deskripsi) return alert("Lengkapi data");
+    if (!sku || !deskripsi) return alert("Lengkapi data");
 
-    const { error } = await supabase.from("products").insert({
-      Artikel,
-      Deskripsi,
+    const { error } = await supabase.from("product").insert({
+      sku,
+      deskripsi,
       Harga,
       Dimensi,
     });
 
     if (error) return alert(error.message);
 
-    setArtikel("");
-    setDeskripsi("");
+    setsku("");
+    setdeskripsi("");
     setHarga(0);
     setDimensi(0);
 
-    loadProducts();
+    loadProduct();
   }
 
   /* ================= DELETE ================= */
@@ -65,24 +68,24 @@ export default function ProductsPage() {
     if (!confirm("Hapus data ini?")) return;
 
     const { error } = await supabase
-      .from("products")
+      .from("product")
       .delete()
       .eq("id", id);
 
     if (error) return alert(error.message);
 
-    loadProducts();
+    loadProduct();
   }
 
   useEffect(() => {
-    loadProducts();
+    loadProduct();
   }, []);
 
   /* ================= DOWNLOAD TEMPLATE ================= */
   function downloadTemplate() {
     const csv =
-      "Artikel,Deskripsi,Harga,Dimensi\n" +
-      "BRG001,Contoh Produk,10000,10";
+      "sku;deskripsi;Harga;Dimensi\n" +
+      "BRG001;Contoh Produk;10000;10";
 
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = window.URL.createObjectURL(blob);
@@ -112,13 +115,13 @@ export default function ProductsPage() {
         );
 
         return {
-          Artikel: (r.artikel || "").toString().trim(),
-          Deskripsi: (r.deskripsi || "").toString().trim(),
+          sku: (r.sku || "").toString().trim(),
+          deskripsi: (r.deskripsi || "").toString().trim(),
           Harga: Number(r.harga || 0),
           Dimensi: Number(r.dimensi || 0),
         };
       })
-      .filter((r) => r.Artikel);
+      .filter((r) => r.sku);
 
     if (formatted.length === 0) {
       alert("Data kosong. Cek file Excel/CSV kamu.");
@@ -126,14 +129,14 @@ export default function ProductsPage() {
     }
 
     const { error } = await supabase
-      .from("products")
+      .from("product")
       .insert(formatted);
 
     if (error) {
       alert(error.message);
     } else {
       alert("Upload sukses");
-      loadProducts();
+      loadProduct();
     }
   }
 
@@ -179,11 +182,21 @@ export default function ProductsPage() {
   }
 
   return (
-    <div className="p-4">
+  <div className="p-4">
 
-      <h1 className="text-xl font-bold mb-4">
+    <div className="flex items-center gap-3 mb-4">
+      <button
+        onClick={() => router.back()}
+        className="flex items-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded text-sm"
+      >
+        <ArrowLeft size={18} />
+        Kembali
+      </button>
+
+      <h1 className="text-xl font-bold">
         Master Product
       </h1>
+    </div>
 
       {/* ================= TOOLS ================= */}
       <div className="flex gap-2 mb-3">
@@ -210,16 +223,16 @@ export default function ProductsPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
 
           <input
-            value={Artikel}
-            onChange={(e) => setArtikel(e.target.value)}
-            placeholder="Artikel"
+            value={sku}
+            onChange={(e) => setsku(e.target.value)}
+            placeholder="sku"
             className="border p-3 text-sm rounded"
           />
 
           <input
-            value={Deskripsi}
-            onChange={(e) => setDeskripsi(e.target.value)}
-            placeholder="Deskripsi"
+            value={deskripsi}
+            onChange={(e) => setdeskripsi(e.target.value)}
+            placeholder="deskripsi"
             className="border p-3 text-sm rounded"
           />
 
@@ -259,8 +272,8 @@ export default function ProductsPage() {
           <thead className="bg-slate-100 text-xs">
             <tr>
               <th className="p-2 text-left">ID</th>
-              <th className="p-2 text-left">Artikel</th>
-              <th className="p-2 text-left">Deskripsi</th>
+              <th className="p-2 text-left">sku</th>
+              <th className="p-2 text-left">deskripsi</th>
               <th className="p-2 text-left">Harga</th>
               <th className="p-2 text-left">Dimensi</th>
               <th className="p-2 text-left">Created</th>
@@ -269,12 +282,12 @@ export default function ProductsPage() {
           </thead>
 
           <tbody>
-            {(products || []).map((item) => (
+            {(product || []).map((item) => (
               <tr key={item.id} className="border-t hover:bg-slate-50">
 
                 <td className="p-2">{item.id}</td>
-                <td className="p-2">{item.Artikel}</td>
-                <td className="p-2">{item.Deskripsi}</td>
+                <td className="p-2">{item.sku}</td>
+                <td className="p-2">{item.deskripsi}</td>
                 <td className="p-2">
                   Rp {Number(item.Harga || 0).toLocaleString()}
                 </td>

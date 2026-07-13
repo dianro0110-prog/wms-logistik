@@ -1,12 +1,19 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
+
 import Sidebar from "../../components/Sidebar";
 import Navbar from "../../components/Navbar";
 import StatCard from "../../components/Statcard";
 
 export default function Dashboard() {
+  const router = useRouter();
+
   return (
     <div className="flex min-h-screen bg-slate-100">
 
-      {/* SIDEBAR (support submenu - no change needed) */}
+      {/* SIDEBAR */}
       <Sidebar />
 
       {/* MAIN AREA */}
@@ -17,15 +24,27 @@ export default function Dashboard() {
 
         {/* CONTENT */}
         <main className="p-6 space-y-6">
-
+         <div className="bg-red-500 text-white p-4">
+  TEST TOMBOL
+</div>
           {/* HEADER */}
-          <div>
-            <h1 className="text-2xl font-bold text-slate-800">
-              Dashboard WMS
-            </h1>
-            <p className="text-slate-500">
-              Ringkasan aktivitas warehouse
-            </p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.back()}
+              className="flex items-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-lg text-sm"
+            >
+              <ArrowLeft size={18} />
+              Back
+            </button>
+
+            <div>
+              <h1 className="text-2xl font-bold text-slate-800">
+                Dashboard WMS
+              </h1>
+              <p className="text-slate-500">
+                Ringkasan aktivitas warehouse
+              </p>
+            </div>
           </div>
 
           {/* STATS */}

@@ -1,25 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { ArrowLeftCircle, Plus, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import * as Papa from "papaparse";
 import * as XLSX from "xlsx";
 
 type Location = {
   id: number;
-  Warehouse: string;
-  KodeLocation: string;
-  TypeLocation: string;
+  warehouse_code: string;
+  location: string;
+  location_type: string;
   created_at?: string;
 };
 
 export default function LocationPage() {
+  const router = useRouter();
   const [locations, setLocations] = useState<Location[]>([]);
 
-  const [Warehouse, setWarehouse] = useState("");
-  const [KodeLocation, setKodeLocation] = useState("");
-  const [TypeLocation, setTypeLocation] = useState("");
+  const [warehouse_code, setwarehouse_code] = useState("");
+  const [location, setLocation] = useState("");
+  const [location_type, setlocation_type] = useState("");
 
   /* ================= LOAD ================= */
   async function loadLocations() {
@@ -39,19 +41,18 @@ export default function LocationPage() {
 
   /* ================= ADD ================= */
   async function addLocation() {
-    if (!Warehouse || !KodeLocation) return alert("Lengkapi data");
+    if (!warehouse_code || !location) return alert("Lengkapi data");
 
     const { error } = await supabase.from("locations").insert({
-      Warehouse,
-      KodeLocation,
-      TypeLocation,
+      warehouse_code,
+      location,
+      location_type,
     });
 
     if (error) return alert(error.message);
 
-    setWarehouse("");
-    setKodeLocation("");
-    setTypeLocation("");
+    setwarehouse_code("");
+    setlocation_type("");
 
     loadLocations();
   }
@@ -77,7 +78,7 @@ export default function LocationPage() {
   /* ================= DOWNLOAD TEMPLATE ================= */
   function downloadTemplate() {
     const csv =
-      "Warehouse;Kode Location;Type Location\n" +
+      "warehouse_code;location;location_type\n" +
       "Gudang A;LOC001;Storage";
 
     const blob = new Blob([csv], {
@@ -104,11 +105,11 @@ export default function LocationPage() {
   async function processData(data: any[]) {
     const formatted = data
       .map((row: any) => ({
-        Warehouse: cleanText(row["Warehouse"]),
-        KodeLocation: cleanText(row["Kode Location"]),
-        TypeLocation: cleanText(row["Type Location"]),
+        warehouse_code: cleanText(row["warehouse_code"]),
+        location: cleanText(row["location"]),
+        location_type: cleanText(row["location_type"]),
       }))
-      .filter((r) => r.Warehouse && r.KodeLocation);
+      .filter((r) => r.warehouse_code && r.location);
 
     if (formatted.length === 0) {
       alert("File tidak valid");
@@ -172,12 +173,21 @@ export default function LocationPage() {
   }
 
   return (
-    <div className="p-4">
+  <div className="p-4">
 
-      <h1 className="text-xl font-bold mb-4">
+    <div className="flex items-center gap-3 mb-4">
+      <button
+        onClick={() => router.back()}
+        className="flex items-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded text-sm"
+      >
+        <ArrowLeftCircle size={18} />
+        Back
+      </button>
+
+      <h1 className="text-xl font-bold">
         Master Location
       </h1>
-
+    </div>
       {/* TOOLS */}
       <div className="flex gap-2 mb-3">
 
@@ -203,23 +213,23 @@ export default function LocationPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
 
           <input
-            value={Warehouse}
-            onChange={(e) => setWarehouse(e.target.value)}
-            placeholder="Warehouse"
+            value={warehouse_code}
+            onChange={(e) => setwarehouse_code(e.target.value)}
+            placeholder="warehouse_code"
             className="border p-3 text-sm rounded"
           />
 
           <input
-            value={KodeLocation}
-            onChange={(e) => setKodeLocation(e.target.value)}
-            placeholder="Kode Location"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            placeholder="Location"
             className="border p-3 text-sm rounded"
           />
 
           <input
-            value={TypeLocation}
-            onChange={(e) => setTypeLocation(e.target.value)}
-            placeholder="Type Location"
+            value={location_type}
+            onChange={(e) => setlocation_type(e.target.value)}
+            placeholder="location_type"
             className="border p-3 text-sm rounded"
           />
 
@@ -256,9 +266,9 @@ export default function LocationPage() {
               <tr key={item.id} className="border-t hover:bg-slate-50">
 
                 <td className="p-2">{item.id}</td>
-                <td className="p-2">{item.Warehouse}</td>
-                <td className="p-2">{item.KodeLocation}</td>
-                <td className="p-2">{item.TypeLocation}</td>
+                <td className="p-2">{item.warehouse_code}</td>
+                <td className="p-2">{item.location}</td>
+                <td className="p-2">{item.location_type}</td>
 
                 <td className="p-2 text-xs">
                   {item.created_at

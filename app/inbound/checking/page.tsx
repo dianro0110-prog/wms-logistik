@@ -2,239 +2,302 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabase";
+import { useRouter } from "next/navigation";
 
-type ReceivingRow = {
-  asn: string;
-  dus: string;
-  artikel: string;
+type Receiving = {
+  id: number;
+  receiving_no: string;
+  supplier_name: string;
+};
+
+type ReceivingDetail = {
+  id: number;
+  receiving_id: number;
+  receiving_no: string;
+  sku: string;
   quantity: number;
 };
 
 type CheckingRow = {
-  asn: string;
-  dus: string;
-  artikel: string;
+  sku: string;
   quantity: number;
+  deskripsi?: string;
 };
 
 export default function CheckingPage() {
-  const [asnList, setAsnList] = useState<string[]>([]);
-  const [selectedASN, setSelectedASN] = useState("");
+  const router = useRouter();
 
-  const [dus, setDus] = useState("");
-  const [artikel, setArtikel] = useState("");
-  const [qty, setQty] = useState(0);
+  const [receivings, setReceivings] = useState<Receiving[]>([]);
+  const [selectedReceivingId, setSelectedReceivingId] = useState<number | null>(null);
+  const [selectedReceivingNo, setSelectedReceivingNo] = useState("");
+
+  const [receivingDetails, setReceivingDetails] = useState<ReceivingDetail[]>([]);
+  const [checkingList, setCheckingList] = useState<CheckingRow[]>([]);
+
+  const [sku, setSku] = useState("");
+  const [qty, setQty] = useState<number>(0);
   const [note, setNote] = useState("");
 
-  const [receiving, setReceiving] = useState<ReceivingRow[]>([]);
-  const [checking, setChecking] = useState<CheckingRow[]>([]);
+  // 🆕 PRODUCTS
+  const [products, setProducts] = useState<any[]>([]);
+  const [deskripsi, setDeskripsi] = useState("");
 
-  // ================= CLEAN =================
-  function clean(v: any) {
-    return (v ?? "")
-      .toString()
-      .replace(/\u00A0/g, " ")
-      .trim()
-      .replace(/\s+/g, "")
-      .toLowerCase();
-  }
+  // ================= LOAD RECEIVINGS =================
+ async function loadReceivings() {
+const { data: checked } = await supabase
+.from("checking")
+.select("receiving_id");
 
-  function cleanNumber(v: any) {
-    return Number(String(v).replace(/[^\d.-]/g, "")) || 0;
-  }
+const checkedIds = (checked || []).map(
+(x: any) => x.receiving_id
+);
 
-  // ================= LOAD ASN =================
-  async function loadASNList() {
-    const { data } = await supabase
-      .from("inbound_transactions")
-      .select("asn")
-      .eq("type", "receiving");
+let query = supabase
+.from("receivings")
+.select("id, receiving_no, supplier_name");
 
-    const unique = Array.from(
-      new Set((data || []).map((d: any) => d.asn))
-    );
+if (checkedIds.length > 0) {
+query = query.not("id", "in", `(${checkedIds.join(",")})`);
+}
 
-    setAsnList(unique);
-  }
+const { data, error } = await query.order("id", {
+ascending: false,
+});
 
-  // ================= LOAD RECEIVING =================
-  async function loadReceiving(asn: string) {
-    const { data } = await supabase
-      .from("inbound_transactions")
+if (error) {
+console.error(error);
+return;
+}
+
+setReceivings(data || []);
+}
+
+
+  // ================= LOAD DETAILS =================
+  async function loadDetails(receivingId: number) {
+    const { data, error } = await supabase
+      .from("receiving_details")
       .select("*")
-      .eq("type", "receiving")
-      .eq("asn", asn);
+      .eq("receiving_id", receivingId);
 
-    setReceiving(data || []);
+    if (error) return console.error(error);
+
+    setReceivingDetails(data || []);
+    setCheckingList([]);
   }
 
-  // ================= LOAD CHECKING =================
-  async function loadChecking(asn: string) {
-    const { data } = await supabase
-      .from("inbound_transactions")
-      .select("*")
-      .eq("type", "checking")
-      .eq("asn", asn);
+  // 🆕 LOAD PRODUCTS
+  async function loadProducts() {
+    const { data, error } = await supabase
+      .from("product")
+      .select("sku, deskripsi");
 
-    setChecking(data || []);
+    if (error) return console.error(error);
+
+    setProducts(data || []);
   }
 
   useEffect(() => {
-    loadASNList();
+    loadReceivings();
+    loadProducts();
   }, []);
 
   useEffect(() => {
-    if (selectedASN) {
-      loadReceiving(selectedASN);
-      loadChecking(selectedASN);
-    }
-  }, [selectedASN]);
+    if (selectedReceivingId) loadDetails(selectedReceivingId);
+  }, [selectedReceivingId]);
 
-  // ================= FIND RECEIVING =================
-  function getReceivingItem() {
-    return receiving.find((r) => {
-      return (
-        clean(r.dus || r.dus) === clean(dus) &&
-        clean(r.artikel) === clean(artikel)
-      );
-    });
-  }
+  // ================= ADD CHECKING =================
+  function addChecking() {
+    if (!sku.trim()) return alert("SKU wajib diisi");
+    if (qty <= 0) return alert("Qty harus > 0");
 
-  // ================= USED QTY =================
-  function getUsedQty() {
-    return checking
-      .filter(
-        (c) =>
-          clean(c.dus) === clean(dus) &&
-          clean(c.artikel) === clean(artikel)
-      )
-      .reduce((sum, c) => sum + cleanNumber(c.quantity), 0);
-  }
+    const cleanSku = sku.toLowerCase().trim();
 
-  // ================= VALIDATION =================
-  function validate() {
-    const rec = getReceivingItem();
+    const detail = receivingDetails.find(
+      (d) => d.sku.toLowerCase().trim() === cleanSku
+    );
 
-    if (!rec) {
-      return { ok: false, msg: "Data tidak ditemukan di Receiving" };
-    }
+    if (!detail) return alert("SKU tidak ada di receiving");
 
-    const receivingQty = cleanNumber(rec.quantity);
-    const usedQty = getUsedQty();
-    const remaining = receivingQty - usedQty;
+    const usedQty = checkingList
+      .filter((x) => x.sku === cleanSku)
+      .reduce((sum, x) => sum + x.quantity, 0);
+
+    const remaining = detail.quantity - usedQty;
 
     if (qty > remaining) {
-      return {
-        ok: false,
-        msg: `Qty melebihi sisa receiving (sisa: ${remaining})`,
-      };
+      return alert(`Qty melebihi limit. Sisa: ${remaining}`);
     }
 
-    return { ok: true, msg: "" };
+    const product = products.find(
+      (p) => p.sku?.toLowerCase().trim() === cleanSku
+    );
+
+    setCheckingList((prev) => [
+      ...prev,
+      {
+        sku: cleanSku,
+        quantity: qty,
+        deskripsi: product?.deskripsi || "",
+      },
+    ]);
+
+    setSku("");
+    setQty(0);
+    setDeskripsi("");
   }
 
   // ================= SUBMIT =================
   async function submit() {
-    if (!selectedASN || !dus || !artikel || qty <= 0) {
-      alert("Lengkapi semua data");
-      return;
-    }
+    if (!selectedReceivingId) return alert("Pilih Receiving dulu");
+    if (checkingList.length === 0) return alert("Belum ada data checking");
 
-    const v = validate();
-
-    if (!v.ok) {
-      alert(v.msg);
-      return;
-    }
-
-    const { error } = await supabase.from("inbound_transactions").insert({
-      type: "checking",
-      asn: selectedASN,
-      dus,
-      artikel,
-      quantity: qty,
-      note,
+    const { error } = await supabase.rpc("create_checking", {
+      p_receiving_id: selectedReceivingId,
+      p_receiving_no: selectedReceivingNo,
+      p_note: note || null,
+      p_items: checkingList.map((x) => ({
+        sku: x.sku,
+        quantity: x.quantity,
+      })),
     });
 
     if (error) {
-      alert(error.message);
-      return;
+      console.error(error);
+      return alert(error.message);
     }
 
-    setDus("");
-    setArtikel("");
+    await supabase
+  .from("receivings")
+  .update({
+    status: "Checking",
+  })
+  .eq("id", selectedReceivingId);
+
+await loadReceivings();
+
+alert("Checking berhasil disimpan");
+
+setSelectedReceivingId(null);
+setSelectedReceivingNo("");
+
+    setCheckingList([]);
+    setSku("");
     setQty(0);
     setNote("");
-
-    loadChecking(selectedASN);
-
-    alert("Checking berhasil disimpan");
+    setDeskripsi("");
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100 p-6">
+    <div className="max-w-4xl mx-auto p-6 space-y-4">
 
-      <div className="w-full max-w-2xl space-y-6">
+      <button
+        onClick={() => router.back()}
+        className="bg-gray-500 text-white px-3 py-1 rounded"
+      >
+        ← Back
+      </button>
 
-        <h1 className="text-2xl font-bold text-center">
-          Checking Inbound
-        </h1>
+      <h1 className="text-2xl font-bold">Checking Inbound</h1>
 
-        {/* FORM */}
-        <div className="bg-white p-6 rounded-xl shadow space-y-4">
+      {/* RECEIVING SELECT */}
+      <select
+        className="border p-2 w-full"
+        value={selectedReceivingId ?? ""}
+        onChange={(e) => {
+          const id = Number(e.target.value);
+          setSelectedReceivingId(id);
 
-          <select
-            className="border p-2 w-full rounded"
-            value={selectedASN}
-            onChange={(e) => setSelectedASN(e.target.value)}
-          >
-            <option value="">Pilih ASN</option>
-            {asnList.map((a) => (
-              <option key={a} value={a}>
-                {a}
-              </option>
-            ))}
-          </select>
+          const selected = receivings.find((r) => r.id === id);
+          setSelectedReceivingNo(selected?.receiving_no || "");
+        }}
+      >
+        <option value="">-- Pilih Receiving --</option>
+        {receivings.map((r) => (
+          <option key={r.id} value={r.id}>
+            {r.receiving_no} - {r.supplier_name}
+          </option>
+        ))}
+      </select>
 
-          <input
-            className="border p-2 w-full rounded"
-            placeholder="No Dus"
-            value={dus}
-            onChange={(e) => setDus(e.target.value)}
-          />
+      {/* INPUT SKU + DESKRIPSI */}
+      <div className="border p-4 space-y-2">
 
-          <input
-            className="border p-2 w-full rounded"
-            placeholder="Artikel"
-            value={artikel}
-            onChange={(e) => setArtikel(e.target.value)}
-          />
+        <input
+          className="border p-2 w-full"
+          placeholder="SKU"
+          value={sku}
+          onChange={(e) => {
+            const value = e.target.value;
+            setSku(value);
 
-          <input
-            className="border p-2 w-full rounded"
-            type="number"
-            placeholder="Qty"
-            value={qty}
-            onChange={(e) => setQty(Number(e.target.value))}
-          />
+            const product = products.find(
+              (p) => p.sku?.toLowerCase().trim() === value.toLowerCase().trim()
+            );
 
-          <input
-            className="border p-2 w-full rounded"
-            placeholder="Note"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
+            setDeskripsi(product?.deskripsi || "");
+          }}
+        />
 
-          <button
-            onClick={submit}
-            className="w-full bg-green-600 text-white py-2 rounded"
-          >
-            Simpan Checking
-          </button>
+        <input
+          className="border p-2 w-full bg-gray-100"
+          placeholder="Deskripsi"
+          value={deskripsi}
+          readOnly
+        />
 
-        </div>
+        <input
+          className="border p-2 w-full"
+          type="number"
+          placeholder="Qty"
+          value={qty}
+          onChange={(e) => setQty(Number(e.target.value))}
+        />
 
+        <button
+          onClick={addChecking}
+          className="bg-blue-600 text-white w-full py-2"
+        >
+          + Tambah Item
+        </button>
       </div>
+
+      {/* TABLE */}
+      <table className="w-full border">
+        <thead>
+          <tr>
+            <th className="border p-2">SKU</th>
+            <th className="border p-2">Deskripsi</th>
+            <th className="border p-2">Qty</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {checkingList.map((item, i) => (
+            <tr key={i}>
+              <td className="border p-2">{item.sku}</td>
+              <td className="border p-2">{item.deskripsi || "-"}</td>
+              <td className="border p-2">{item.quantity}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {/* NOTE */}
+      <input
+        className="border p-2 w-full"
+        placeholder="Note"
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+      />
+
+      {/* SUBMIT */}
+      <button
+        onClick={submit}
+        className="bg-green-600 text-white w-full py-2"
+      >
+        Simpan Checking
+      </button>
     </div>
   );
 }

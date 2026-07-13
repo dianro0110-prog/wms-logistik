@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-
+import { supabase } from "../../lib/supabase";
 import Sidebar from "../../components/Sidebar";
 import Navbar from "../../components/Navbar";
 import StatCard from "../../components/Statcard";
@@ -22,56 +21,128 @@ import {
   YAxis,
 } from "recharts";
 
-const produkKeluarData = [
-  { bulan: "Jan", qty: 120 },
-  { bulan: "Feb", qty: 180 },
-  { bulan: "Mar", qty: 250 },
-  { bulan: "Apr", qty: 210 },
-  { bulan: "Mei", qty: 320 },
-  { bulan: "Jun", qty: 280 },
-];
-
-const stokData = [
-  { bulan: "Jan", stok: 1200 },
-  { bulan: "Feb", stok: 1800 },
-  { bulan: "Mar", stok: 1600 },
-  { bulan: "Apr", stok: 2200 },
-  { bulan: "Mei", stok: 2400 },
-  { bulan: "Jun", stok: 2600 },
-];
-
-const kategoriData = [
-  { name: "Elektronik", value: 35 },
-  { name: "Sparepart", value: 25 },
-  { name: "Aksesoris", value: 20 },
-  { name: "Lainnya", value: 20 },
-];
-
-const COLORS = [
-  "#2563eb",
-  "#10b981",
-  "#f59e0b",
-  "#ef4444",
-];
+const COLORS = ["#2563eb", "#10b981", "#f59e0b", "#ef4444"];
 
 export default function Dashboard() {
-  const router = useRouter();
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const token = localStorage.getItem("wms_token");
+  // KPI REAL DATA
+  const [totalReceiving, setTotalReceiving] = useState(0);
+  const [totalChecking, setTotalChecking] = useState(0);
+  const [totalPutaway, setTotalPutaway] = useState(0);
+  const [totalProduct, setTotalProduct] = useState(0);
 
-    if (!token) {
-      router.replace("/login");
-    } else {
-      setLoading(false);
-    }
-  }, [router]);
+  // CHART DATA REAL
+  const [monthlyReceiving, setMonthlyReceiving] = useState<any[]>([]);
+  const [monthlyPutaway, setMonthlyPutaway] = useState<any[]>([]);
+
+  // ================= LOAD KPI =================
+  async function loadKPI() {
+    const [{ count: r }, { count: c }, { count: p }, { count: pr }] =
+      await Promise.all([
+        supabase.from("receivings").select("*", { count: "exact", head: true }),
+        supabase.from("checking").select("*", { count: "exact", head: true }),
+        supabase.from("putaways").select("*", { count: "exact", head: true }),
+        supabase.from("product").select("*", { count: "exact", head: true }),
+      ]);
+
+    setTotalReceiving(r || 0);
+    setTotalChecking(c || 0);
+    setTotalPutaway(p || 0);
+    setTotalProduct(pr || 0);
+  }
+
+  // ================= LOAD CHART RECEIVING =================
+  async function loadMonthlyReceiving() {
+    const { data } = await supabase
+      .from("receivings")
+      .select("created_at");
+
+    const map: Record<string, number> = {};
+
+    (data || []).forEach((d) => {
+      const month = new Date(d.created_at).toLocaleString("id-ID", {
+        month: "short",
+      });
+
+      map[month] = (map[month] || 0) + 1;
+    });
+
+    setMonthlyReceiving(
+      Object.keys(map).map((m) => ({
+        month: m,
+        total: map[m],
+      }))
+    );
+  }
+
+  // ================= LOAD CHART PUTAWAY =================
+  async function loadMonthlyPutaway() {
+    const { data } = await supabase
+      .from("putaways")
+      .select("created_at");
+
+    const map: Record<string, number> = {};
+
+    (data || []).forEach((d) => {
+      const month = new Date(d.created_at).toLocaleString("id-ID", {
+        month: "short",
+      });
+
+      map[month] = (map[month] || 0) + 1;
+    });
+
+    setMonthlyPutaway(
+      Object.keys(map).map((m) => ({
+        month: m,
+        total: map[m],
+      }))
+    );
+  }
+
+  // ================= REALTIME =================
+  useEffect(() => {
+    loadKPI();
+    loadMonthlyReceiving();
+    loadMonthlyPutaway();
+    setLoading(false);
+
+    const channel = supabase
+      .channel("wms-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "receivings" },
+        () => {
+          loadKPI();
+          loadMonthlyReceiving();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "putaways" },
+        () => {
+          loadKPI();
+          loadMonthlyPutaway();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "checking" },
+        () => {
+          loadKPI();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center">
-        <p className="text-slate-500">Loading...</p>
+        <p>Loading...</p>
       </div>
     );
   }
@@ -85,189 +156,114 @@ export default function Dashboard() {
 
         <main className="p-6 space-y-6">
 
+          {/* HEADER */}
           <div>
-            <h1 className="text-3xl font-bold text-slate-800">
-              Dashboard Warehouse
+            <h1 className="text-3xl font-bold">
+              Dashboard WMS Realtime
             </h1>
-
             <p className="text-slate-500">
-              Monitoring aktivitas gudang secara realtime
+              Data langsung dari aktivitas Receiving, Checking, Putaway
             </p>
           </div>
 
           {/* KPI */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard title="Total Produk" value="250" />
-            <StatCard title="Total Stok" value="12.500" />
-            <StatCard title="Barang Masuk" value="320" />
-            <StatCard title="Barang Keluar" value="180" />
+            <StatCard title="Receiving" value={totalReceiving} />
+            <StatCard title="Checking" value={totalChecking} />
+            <StatCard title="Putaway" value={totalPutaway} />
+            <StatCard title="Products" value={totalProduct} />
           </div>
 
-          {/* Aktivitas */}
+          {/* CHART REAL */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-            <div className="bg-white rounded-xl shadow p-6">
-              <h2 className="text-lg font-semibold mb-4">
-                Aktivitas Gudang Hari Ini
+            {/* RECEIVING CHART */}
+            <div className="bg-white p-6 rounded-xl shadow">
+              <h2 className="font-semibold mb-4">
+                Receiving Activity (Realtime)
               </h2>
 
-              <div className="space-y-5">
-
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <span>Receiving</span>
-                    <span>85%</span>
-                  </div>
-
-                  <div className="w-full h-3 bg-slate-200 rounded-full">
-                    <div className="h-3 w-[85%] bg-blue-500 rounded-full"></div>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <span>Putaway</span>
-                    <span>70%</span>
-                  </div>
-
-                  <div className="w-full h-3 bg-slate-200 rounded-full">
-                    <div className="h-3 w-[70%] bg-green-500 rounded-full"></div>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <span>Picking</span>
-                    <span>55%</span>
-                  </div>
-
-                  <div className="w-full h-3 bg-slate-200 rounded-full">
-                    <div className="h-3 w-[55%] bg-yellow-500 rounded-full"></div>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between mb-1">
-                    <span>Shipping</span>
-                    <span>40%</span>
-                  </div>
-
-                  <div className="w-full h-3 bg-slate-200 rounded-full">
-                    <div className="h-3 w-[40%] bg-red-500 rounded-full"></div>
-                  </div>
-                </div>
-
-              </div>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={monthlyReceiving}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="total" fill="#2563eb" />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
 
-            <div className="bg-white rounded-xl shadow p-6">
-              <h2 className="text-lg font-semibold mb-4">
-                Ringkasan Operasional
+            {/* PUTAWAY CHART */}
+            <div className="bg-white p-6 rounded-xl shadow">
+              <h2 className="font-semibold mb-4">
+                Putaway Activity (Realtime)
               </h2>
 
-              <div className="grid grid-cols-2 gap-4">
-
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <p className="text-sm text-slate-500">Receiving</p>
-                  <p className="text-2xl font-bold text-blue-600">125</p>
-                </div>
-
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <p className="text-sm text-slate-500">Putaway</p>
-                  <p className="text-2xl font-bold text-green-600">98</p>
-                </div>
-
-                <div className="bg-yellow-50 p-4 rounded-lg">
-                  <p className="text-sm text-slate-500">Picking</p>
-                  <p className="text-2xl font-bold text-yellow-600">76</p>
-                </div>
-
-                <div className="bg-red-50 p-4 rounded-lg">
-                  <p className="text-sm text-slate-500">Shipping</p>
-                  <p className="text-2xl font-bold text-red-600">54</p>
-                </div>
-
-              </div>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={monthlyPutaway}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line
+                    type="monotone"
+                    dataKey="total"
+                    stroke="#10b981"
+                    strokeWidth={3}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
-
           </div>
 
-          {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-            <div className="bg-white rounded-xl shadow p-6">
-              <h2 className="text-lg font-semibold mb-4">
-                Produk Keluar per Bulan
-              </h2>
-
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={produkKeluarData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="bulan" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar
-                      dataKey="qty"
-                      fill="#2563eb"
-                      radius={[6, 6, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow p-6">
-              <h2 className="text-lg font-semibold mb-4">
-                Trend Stok Gudang
-              </h2>
-
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={stokData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="bulan" />
-                    <YAxis />
-                    <Tooltip />
-                    <Line
-                      type="monotone"
-                      dataKey="stok"
-                      stroke="#10b981"
-                      strokeWidth={3}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-          </div>
-
-          <div className="bg-white rounded-xl shadow p-6">
-            <h2 className="text-lg font-semibold mb-4">
-              Distribusi Kategori Produk
+          {/* STATUS VISUAL REAL */}
+          <div className="bg-white p-6 rounded-xl shadow">
+            <h2 className="font-semibold mb-4">
+              Workflow Status WMS
             </h2>
 
-            <div className="h-96">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={kategoriData}
-                    dataKey="value"
-                    nameKey="name"
-                    outerRadius={120}
-                    label
-                  >
-                    {kategoriData.map((entry, index) => (
-                      <Cell
-                        key={index}
-                        fill={COLORS[index % COLORS.length]}
-                      />
-                    ))}
-                  </Pie>
+            <div className="space-y-4">
 
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+              <div>
+                <div className="flex justify-between">
+                  <span>Receiving</span>
+                  <span>{totalReceiving}</span>
+                </div>
+                <div className="h-3 bg-slate-200 rounded">
+                  <div
+                    className="h-3 bg-blue-500 rounded"
+                    style={{ width: `${Math.min(totalReceiving, 100)}%` }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between">
+                  <span>Checking</span>
+                  <span>{totalChecking}</span>
+                </div>
+                <div className="h-3 bg-slate-200 rounded">
+                  <div
+                    className="h-3 bg-yellow-500 rounded"
+                    style={{ width: `${Math.min(totalChecking, 100)}%` }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between">
+                  <span>Putaway</span>
+                  <span>{totalPutaway}</span>
+                </div>
+                <div className="h-3 bg-slate-200 rounded">
+                  <div
+                    className="h-3 bg-green-500 rounded"
+                    style={{ width: `${Math.min(totalPutaway, 100)}%` }}
+                  />
+                </div>
+              </div>
+
             </div>
           </div>
 

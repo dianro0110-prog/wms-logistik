@@ -9,12 +9,15 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@prisma/client": "^7.8.0",
     "@supabase/supabase-js": "^2.108.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "file-saver": "^2.0.5",
     "lucide-react": "^1.18.0",
     "next": "^16.2.9",
     "papaparse": "^5.5.3",
+    "prisma": "^7.8.0",
     "radix-ui": "^1.5.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
@@ -35,6 +38,6 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5.9.3"
   }
 }
