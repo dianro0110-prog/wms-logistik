@@ -171,7 +171,7 @@ alignItems:"center"
         fontWeight: "bold",
       }}
     >
-      WMS-Warehouse
+      Warehouse System management
     </div>
 
     <div
