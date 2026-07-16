@@ -171,7 +171,7 @@ alignItems:"center"
         fontWeight: "bold",
       }}
     >
-      Warehouse management System
+      Warehouse Management System
     </div>
 
     <div
