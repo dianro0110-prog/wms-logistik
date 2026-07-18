@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">WMS Logistik</string>
+    <string name="title_activity_main">WMS Logistik</string>
+    <string name="package_name">com.wms.logistik</string>
+    <string name="custom_url_scheme">com.wms.logistik</string>
+</resources>
