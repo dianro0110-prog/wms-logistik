@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 
 import { Capacitor } from "@capacitor/core";
-import MobileLogin from "../login/MobileLogin";
+import MobileLogin from "./MobileLogin";
 
 
 const isMobileApp = Capacitor.isNativePlatform();
@@ -272,7 +272,7 @@ export default function LoginPage() {
         }}
       ></div>
       
-      /* header website + sisi kiri informasi WMS */
+      
 
               <div
           style={{
@@ -690,7 +690,7 @@ export default function LoginPage() {
 
           </div>
 
-          /* form login */
+         
 
                     <div
             style={{
