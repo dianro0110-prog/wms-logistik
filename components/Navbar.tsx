@@ -1,30 +1,70 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { Bell, Search, UserCircle, LogOut } from "lucide-react";
+import { useEffect, useState } from "react";
+import { UserCircle } from "lucide-react";
+import { supabase } from "../lib/supabase";
 
 export default function Navbar() {
-  const router = useRouter();
+  const [userName, setUserName] = useState("Loading...");
 
-  const handleLogout = () => {
-    localStorage.removeItem("wms_token");
-    router.push("/login");
-  };
+  useEffect(() => {
+    const getUser = async () => {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    setUserName("Guest");
+    return;
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("username")
+    .eq("id", user.id)
+    .single();
+
+  if (profile) {
+    setUserName(profile.username);
+  } else {
+    setUserName(user.email ?? "User");
+  }
+};
+
+    getUser();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      getUser();
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   return (
     <header className="bg-white shadow-sm border-b">
       <div className="flex items-center justify-between px-6 py-4">
+        <h1 className="text-xl font-bold">
+          Warehouse Dashboard
+        </h1>
 
-        <h1 className="text-xl font-bold">Dashboard Warehouse</h1>
+        <div className="flex items-center gap-3">
+          <UserCircle
+            size={36}
+            className="text-blue-600"
+          />
 
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-2 text-red-500"
-        >
-          <LogOut size={18} />
-          Logout
-        </button>
+          <div className="flex flex-col">
+            <span className="text-sm text-gray-500">
+              Users Name
+            </span>
 
+            <span className="font-semibold text-gray-800">
+              {userName}
+            </span>
+          </div>
+        </div>
       </div>
     </header>
   );

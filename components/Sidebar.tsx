@@ -1,7 +1,12 @@
 "use client";
 
-import { useState } from "react";
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { supabase } from "../lib/supabase";
+
 import {
   LayoutDashboard,
   Package,
@@ -13,23 +18,64 @@ import {
   Boxes,
   Menu,
   X,
+  UserCircle,
+  LogOut,
 } from "lucide-react";
 
 export default function Sidebar() {
+  const [openMenu, setOpenMenu] = useState(false);
   const [openMaster, setOpenMaster] = useState(false);
   const [openInbound, setOpenInbound] = useState(false);
   const [openInventory, setOpenInventory] = useState(false);
   const [openOutbound, setOpenOutbound] = useState(false);
+const router = useRouter();
 
+const [userName, setUserName] = useState("Loading...");
   // ✅ NEW: sidebar collapse
   const [collapsed, setCollapsed] = useState(false);
 
+useEffect(() => {
+  const getUser = async () => {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    setUserName("Guest");
+    return;
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("username")
+    .eq("id", user.id)
+    .single();
+
+  if (profile) {
+    setUserName(profile.username);
+  } else {
+    setUserName(user.email ?? "User");
+  }
+};
+
+  getUser();
+}, []);
+
+const handleLogout = async () => {
+  await supabase.auth.signOut();
+
+  localStorage.removeItem("wms_token");
+
+  router.push("/login");
+};
+
   return (
     <aside
-      className={`min-h-screen bg-slate-900 text-white transition-all duration-300 ${
-        collapsed ? "w-20" : "w-64"
-      }`}
-    >
+  className={`min-h-screen bg-slate-900 text-white transition-all duration-300 flex flex-col ${
+    collapsed ? "w-20" : "w-64"
+  }`}
+>
+    
       {/* HEADER */}
       <div className="p-5 border-b border-slate-700 flex items-center justify-between">
         {!collapsed && (
@@ -44,168 +90,203 @@ export default function Sidebar() {
         </button>
       </div>
 
-      <nav className="p-4 space-y-2">
+      <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
 
-        {/* DASHBOARD */}
-        <Link
-          href="/dashboard"
-          className="flex items-center gap-3 px-3 py-2 rounded hover:bg-slate-800"
-        >
-          <LayoutDashboard size={18} />
-          {!collapsed && "Dashboard"}
-        </Link>
+  {/* DASHBOARD */}
+  <Link
+    href="/dashboard"
+    className="flex items-center gap-3 px-3 py-2 rounded hover:bg-slate-800"
+  >
+    <LayoutDashboard size={18} />
+    {!collapsed && "Dashboard"}
+  </Link>
 
-        {/* MASTER */}
-        <button
-          onClick={() => setOpenMaster(!openMaster)}
-          className="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-slate-800"
-        >
-          <div className="flex items-center gap-3">
-            <Package size={18} />
-            {!collapsed && "Master Data"}
-          </div>
-          {!collapsed && <span>{openMaster ? "▲" : "▼"}</span>}
-        </button>
+  {/* MENU UTAMA */}
+  <button
+    onClick={() => setOpenMenu(!openMenu)}
+    className="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-slate-800"
+  >
+    <div className="flex items-center gap-3">
+      <Menu size={18} />
+      {!collapsed && "Menu"}
+    </div>
+    {!collapsed && <span>{openMenu ? "▲" : "▼"}</span>}
+  </button>
 
-        {!collapsed && openMaster && (
-          <div className="ml-6 space-y-1">
-            <Link href="/products" className="block px-3 py-2 hover:bg-slate-800 rounded">
-              Products
-            </Link>
-            <Link href="/location" className="block px-3 py-2 hover:bg-slate-800 rounded">
-              Location
-            </Link>
-            <Link href="/categories" className="block px-3 py-2 hover:bg-slate-800 rounded">
-              Category
-            </Link>
-          </div>
-        )}
+  {/* SEMUA MENU DIBUNGKUS */}
+  {!collapsed && openMenu && (
+    <div className="ml-4 space-y-2">
 
-        {/* SUPPLIER */}
-        <Link
-          href="/suppliers"
-          className="flex items-center gap-3 px-3 py-2 rounded hover:bg-slate-800"
-        >
-          <Building2 size={18} />
-          {!collapsed && "Supplier"}
-        </Link>
+      {/* MASTER */}
+      <button
+        onClick={() => setOpenMaster(!openMaster)}
+        className="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-slate-800"
+      >
+        <div className="flex items-center gap-3">
+          <Package size={18} />
+          Master Data
+        </div>
+        <span>{openMaster ? "▲" : "▼"}</span>
+      </button>
 
-        {/* WAREHOUSE */}
-        <Link
-          href="/warehouses"
-          className="flex items-center gap-3 px-3 py-2 rounded hover:bg-slate-800"
-        >
-          <Warehouse size={18} />
-          {!collapsed && "Gudang"}
-        </Link>
+      {openMaster && (
+        <div className="ml-6 space-y-1">
+          <Link href="/products" className="block px-3 py-2 hover:bg-slate-800 rounded">
+            Products
+          </Link>
+          <Link href="/location" className="block px-3 py-2 hover:bg-slate-800 rounded">
+            Location
+          </Link>
+          <Link href="/categories" className="block px-3 py-2 hover:bg-slate-800 rounded">
+            Category
+          </Link>
+        </div>
+      )}
 
-        {/* INBOUND */}
-        <button
-          onClick={() => setOpenInbound(!openInbound)}
-          className="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-slate-800"
-        >
-          <div className="flex items-center gap-3">
-            <ArrowDownCircle size={18} />
-            {!collapsed && "Barang Masuk"}
-          </div>
-          {!collapsed && <span>{openInbound ? "▲" : "▼"}</span>}
-        </button>
+      {/* SUPPLIER */}
+      <Link
+        href="/suppliers"
+        className="flex items-center gap-3 px-3 py-2 rounded hover:bg-slate-800"
+      >
+        <Building2 size={18} />
+        Supplier
+      </Link>
 
-        {!collapsed && openInbound && (
-          <div className="ml-6 space-y-1">
-            <Link href="/inbound/receiving" className="block px-3 py-2 hover:bg-slate-800 rounded">
-              Receiving
-            </Link>
-            <Link href="/inbound/checking" className="block px-3 py-2 hover:bg-slate-800 rounded">
-              Checking
-            </Link>
-            <Link href="/inbound/putaway" className="block px-3 py-2 hover:bg-slate-800 rounded">
-              Putaway
-            </Link>
-          </div>
-        )}
+      {/* WAREHOUSE */}
+      <Link
+        href="/warehouses"
+        className="flex items-center gap-3 px-3 py-2 rounded hover:bg-slate-800"
+      >
+        <Warehouse size={18} />
+        Warehouse
+      </Link>
 
-        {/* INVENTORY */}
-        <button
-          onClick={() => setOpenInventory(!openInventory)}
-          className="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-slate-800"
-        >
-          <div className="flex items-center gap-3">
-            <Boxes size={18} />
-            {!collapsed && "Inventory"}
-          </div>
-          {!collapsed && <span>{openInventory ? "▲" : "▼"}</span>}
-        </button>
+      {/* INBOUND */}
+      <button
+        onClick={() => setOpenInbound(!openInbound)}
+        className="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-slate-800"
+      >
+        <div className="flex items-center gap-3">
+          <ArrowDownCircle size={18} />
+          Barang Masuk
+        </div>
+        <span>{openInbound ? "▲" : "▼"}</span>
+      </button>
 
-        {!collapsed && openInventory && (
-          <div className="ml-6 space-y-1">
-            <Link href="/inventory/inventory_list" className="block px-3 py-2 hover:bg-slate-800 rounded">
-              Inventory List
-            </Link>
-            <Link href="/inventory/movement" className="block px-3 py-2 hover:bg-slate-800 rounded">
-              Movement
-            </Link>
-            <Link href="/inventory/movement_list" className="block px-3 py-2 hover:bg-slate-800 rounded">
-              Movement List
-            </Link>
-          </div>
-        )}
+      {openInbound && (
+        <div className="ml-6 space-y-1">
+          <Link href="/inbound/receiving" className="block px-3 py-2 hover:bg-slate-800 rounded">
+            Receiving
+          </Link>
+          <Link href="/inbound/checking" className="block px-3 py-2 hover:bg-slate-800 rounded">
+            Checking
+          </Link>
+          <Link href="/inbound/putaway" className="block px-3 py-2 hover:bg-slate-800 rounded">
+            Putaway
+          </Link>
+        </div>
+      )}
 
-        {/* OUTBOUND */}
-<button
-  onClick={() => setOpenOutbound(!openOutbound)}
-  className="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-slate-800"
->
-  <div className="flex items-center gap-3">
-    <ArrowUpCircle size={18} />
-    {!collapsed && "Barang Keluar"}
-  </div>
-  {!collapsed && <span>{openOutbound ? "▲" : "▼"}</span>}
-</button>
+      {/* INVENTORY */}
+      <button
+        onClick={() => setOpenInventory(!openInventory)}
+        className="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-slate-800"
+      >
+        <div className="flex items-center gap-3">
+          <Boxes size={18} />
+          Inventory
+        </div>
+        <span>{openInventory ? "▲" : "▼"}</span>
+      </button>
 
-{!collapsed && openOutbound && (
-  <div className="ml-6 space-y-1">
+      {openInventory && (
+        <div className="ml-6 space-y-1">
+          <Link href="/inventory/inventory_list" className="block px-3 py-2 hover:bg-slate-800 rounded">
+            Inventory List
+          </Link>
+          <Link href="/inventory/movement" className="block px-3 py-2 hover:bg-slate-800 rounded">
+            Movement
+          </Link>
+          <Link href="/inventory/movement_list" className="block px-3 py-2 hover:bg-slate-800 rounded">
+            Movement List
+          </Link>
+        </div>
+      )}
 
-    <Link
-      href="/outbound/upload"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
-    >
-      Upload Orders
-    </Link>
+      {/* OUTBOUND */}
+      <button
+        onClick={() => setOpenOutbound(!openOutbound)}
+        className="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-slate-800"
+      >
+        <div className="flex items-center gap-3">
+          <ArrowUpCircle size={18} />
+          Barang Keluar
+        </div>
+        <span>{openOutbound ? "▲" : "▼"}</span>
+      </button>
 
-<Link href="/outbound/orders">
-  <div className="flex items-center gap-2 p-2 hover:bg-slate-700 rounded">
-    Order List
-  </div>
-</Link>
+      {openOutbound && (
+        <div className="ml-6 space-y-1">
+          <Link href="/outbound/upload" className="block px-3 py-2 hover:bg-slate-800 rounded">
+            Upload Orders
+          </Link>
 
+          <Link href="/outbound/orders" className="block px-3 py-2 hover:bg-slate-800 rounded">
+            Order List
+          </Link>
 
-    <Link
-      href="/outbound/picking"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
-    >
-      Picking
-    </Link>
+          <Link href="/outbound/picking" className="block px-3 py-2 hover:bg-slate-800 rounded">
+            Picking
+          </Link>
 
-    <Link
-      href="/outbound/packing"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
-    >
-      Packing
-    </Link>
+          <Link href="/outbound/packing" className="block px-3 py-2 hover:bg-slate-800 rounded">
+            Packing
+          </Link>
+        </div>
+      )}
 
-  </div>
-)}
-        {/* REPORT */}
-        <Link
-          href="/reports"
-          className="flex items-center gap-3 px-3 py-2 rounded hover:bg-slate-800"
-        >
-          <FileText size={18} />
-          {!collapsed && "Laporan"}
-        </Link>
+      {/* REPORT */}
+      <Link
+        href="/reports"
+        className="flex items-center gap-3 px-3 py-2 rounded hover:bg-slate-800"
+      >
+        <FileText size={18} />
+        Laporan
+      </Link>
 
-      </nav>
+    </div>
+  )}
+
+</nav>
+
+<div className="border-t border-slate-700 p-4">
+
+  {!collapsed && (
+    <div className="flex items-center gap-3 mb-4">
+      <UserCircle size={40} />
+
+      <div>
+        <div className="text-xs text-slate-400">
+          Users Login
+        </div>
+
+        <div className="font-semibold text-sm break-all">
+          {userName}
+        </div>
+      </div>
+    </div>
+  )}
+
+  <button
+    onClick={handleLogout}
+    className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 py-2 rounded-lg transition"
+  >
+    <LogOut size={18} />
+
+    {!collapsed && "Logout"}
+  </button>
+
+</div>
     </aside>
   );
 }

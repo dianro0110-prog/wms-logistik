@@ -57,7 +57,7 @@ async function allocateOrder() {
         await supabase
           .from("inventory")
           .select("*")
-          .eq("sku", item.sku)
+          .eq("sku", item.sku.trim())
           .single();
 
       if (inventoryError || !inventoryData) {

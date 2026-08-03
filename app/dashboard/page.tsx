@@ -159,10 +159,10 @@ export default function Dashboard() {
           {/* HEADER */}
           <div>
             <h1 className="text-3xl font-bold">
-              Dashboard WMS Realtime
+              
             </h1>
             <p className="text-slate-500">
-              Data langsung dari aktivitas Receiving, Checking, Putaway
+              Receiving, Inbound, Outbound & Delivery Activity
             </p>
           </div>
 
