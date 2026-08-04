@@ -1,384 +1,260 @@
 "use client";
 
+import React from "react";
 import {
+  ArrowRight,
   Eye,
   EyeOff,
-  ArrowRight,
   LogIn,
 } from "lucide-react";
 
+interface MobileLoginProps {
+  name: string;
+  setusername: (value: string) => void;
+
+  password: string;
+  setPassword: (value: string) => void;
+
+  showPassword: boolean;
+  setShowPassword: (value: boolean) => void;
+
+  loading: boolean;
+  error: string;
+
+  handleLogin: (e: React.FormEvent<HTMLFormElement>) => void;
+}
+
 export default function MobileLogin({
-
-  email,
-  setEmail,
-
+  name,
+  setusername,
   password,
   setPassword,
-
   showPassword,
   setShowPassword,
-
   loading,
   error,
-
   handleLogin,
-
-}: any) {
-
+}: MobileLoginProps) {
   return (
-
     <div
       style={{
         minHeight: "100vh",
-        background:
-          "linear-gradient(180deg,#0f172a 0%, #1e3a8a 100%)",
+        background: "#edf3ef",
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
-        padding: "20px",
+        padding: 20,
       }}
     >
-
       <div
         style={{
           width: "100%",
-          maxWidth: "360px",
-          background: "#ffffff",
-          borderRadius: "24px",
-          padding: "30px 25px",
-          boxShadow: "0 15px 40px rgba(0,0,0,.20)",
+          maxWidth: 420,
+          background: "#fff",
+          borderRadius: 18,
+          padding: 30,
+          boxShadow: "0 10px 25px rgba(0,0,0,.12)",
         }}
       >
-
-        {/* Logo */}
-
+        {/* ICON */}
         <div
           style={{
             display: "flex",
             justifyContent: "center",
-            marginBottom: "18px",
+            marginBottom: 25,
           }}
         >
-
           <div
             style={{
-              width: "72px",
-              height: "72px",
-              borderRadius: "18px",
+              width: 75,
+              height: 75,
+              borderRadius: 16,
               background: "#03163f",
               display: "flex",
-              alignItems: "center",
               justifyContent: "center",
+              alignItems: "center",
               color: "#fff",
             }}
           >
-
-            <LogIn size={34} />
-
+            <LogIn size={32} />
           </div>
-
         </div>
 
-        {/* Judul */}
+        {/* TITLE */}
 
         <h2
           style={{
             textAlign: "center",
-            fontSize: "28px",
-            fontWeight: 700,
-            color: "#111827",
-            margin: 0,
+            fontSize: 28,
+            fontWeight: "bold",
+            marginBottom: 8,
           }}
         >
-          Masuk
+          Login WMS
         </h2>
 
         <p
           style={{
             textAlign: "center",
-            color: "#6b7280",
-            marginTop: "10px",
-            marginBottom: "30px",
-            fontSize: "14px",
-            lineHeight: "22px",
+            color: "#666",
+            marginBottom: 30,
           }}
         >
-          Login ke
-          <br />
-          Warehouse Management System
+          Gunakan username untuk masuk
         </p>
 
-        {/* Error */}
+        {/* ERROR */}
 
         {error && (
           <div
             style={{
               background: "#fee2e2",
               color: "#dc2626",
-              padding: "12px",
-              borderRadius: "10px",
-              marginBottom: "20px",
-              fontSize: "14px",
+              padding: 12,
+              borderRadius: 10,
               textAlign: "center",
+              marginBottom: 20,
+              fontWeight: 500,
             }}
           >
             {error}
           </div>
         )}
 
-        {/* FORM DIMULAI DI BAGIAN 2 */}
+        {/* FORM */}
+
         <form onSubmit={handleLogin}>
+          {/* USERNAME */}
 
-                      {/* Email */}
+          <div style={{ marginBottom: 20 }}>
+            <label
+              style={{
+                display: "block",
+                marginBottom: 8,
+                fontWeight: 600,
+              }}
+            >
+              Username
+            </label>
 
-          <label
-            style={{
-              display: "block",
-              marginBottom: "8px",
-              fontWeight: 600,
-              color: "#374151",
-              fontSize: "14px",
-            }}
-          >
-            Email
-          </label>
-
-          <input
-            type="email"
-            placeholder="Masukkan email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "14px",
-              border: "1px solid #d1d5db",
-              borderRadius: "12px",
-              fontSize: "15px",
-              marginBottom: "20px",
-              boxSizing: "border-box",
-              outline: "none",
-            }}
-          />
-
-          {/* Password */}
-
-          <label
-            style={{
-              display: "block",
-              marginBottom: "8px",
-              fontWeight: 600,
-              color: "#374151",
-              fontSize: "14px",
-            }}
-          >
-            Password
-          </label>
-
-          <div
-            style={{
-              position: "relative",
-            }}
-          >
             <input
-              type={showPassword ? "text" : "password"}
-              placeholder="Masukkan password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              type="text"
+              value={name}
+              onChange={(e) => setusername(e.target.value)}
+              placeholder="Masukkan username"
+              required
               style={{
                 width: "100%",
-                padding: "14px",
-                paddingRight: "50px",
+                padding: 15,
+                borderRadius: 10,
                 border: "1px solid #d1d5db",
-                borderRadius: "12px",
-                fontSize: "15px",
+                fontSize: 16,
                 boxSizing: "border-box",
                 outline: "none",
               }}
             />
-
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              style={{
-                position: "absolute",
-                right: "15px",
-                top: "50%",
-                transform: "translateY(-50%)",
-                background: "transparent",
-                border: "none",
-                cursor: "pointer",
-                color: "#6b7280",
-              }}
-            >
-              {showPassword ? (
-                <EyeOff size={20} />
-              ) : (
-                <Eye size={20} />
-              )}
-            </button>
           </div>
 
-          {/* Opsi */}
+          {/* PASSWORD */}
 
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginTop: "16px",
-              marginBottom: "28px",
-              fontSize: "13px",
-            }}
-          >
+          <div style={{ marginBottom: 25 }}>
             <label
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                color: "#4b5563",
-                cursor: "pointer",
-              }}
-            >
-              <input type="checkbox" />
-              Ingat Saya
-            </label>
-
-            <span
-              style={{
-                color: "#2563eb",
-                cursor: "pointer",
+                display: "block",
+                marginBottom: 8,
                 fontWeight: 600,
               }}
             >
-              Lupa Password?
-            </span>
+              Password
+            </label>
+
+            <div
+              style={{
+                position: "relative",
+              }}
+            >
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Masukkan password"
+                required
+                style={{
+                  width: "100%",
+                  padding: 15,
+                  paddingRight: 55,
+                  borderRadius: 10,
+                  border: "1px solid #d1d5db",
+                  fontSize: 16,
+                  boxSizing: "border-box",
+                  outline: "none",
+                }}
+              />
+
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: "absolute",
+                  right: 15,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                {showPassword ? (
+                  <EyeOff size={20} />
+                ) : (
+                  <Eye size={20} />
+                )}
+              </button>
+            </div>
           </div>
 
-          {/* Tombol Login */}
+          {/* LOGIN */}
 
           <button
             type="submit"
             disabled={loading}
             style={{
               width: "100%",
-              padding: "15px",
-              border: "none",
-              borderRadius: "12px",
               background: "#03163f",
-              color: "#ffffff",
-              fontWeight: 700,
-              fontSize: "15px",
-              cursor: "pointer",
+              color: "#fff",
+              border: "none",
+              borderRadius: 10,
+              padding: 15,
+              fontWeight: "bold",
+              fontSize: 16,
+              cursor: loading ? "not-allowed" : "pointer",
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              gap: "10px",
+              gap: 10,
             }}
           >
-            {loading ? "Loading..." : "Masuk ke Dashboard"}
+            {loading ? "Loading..." : "Masuk"}
 
             {!loading && <ArrowRight size={18} />}
           </button>
-
-          {/* Divider */}
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              margin: "28px 0",
-            }}
-          >
-            <div
-              style={{
-                flex: 1,
-                height: "1px",
-                background: "#e5e7eb",
-              }}
-            />
-
-            <span
-              style={{
-                margin: "0 12px",
-                color: "#9ca3af",
-                fontSize: "13px",
-              }}
-            >
-              atau
-            </span>
-
-            <div
-              style={{
-                flex: 1,
-                height: "1px",
-                background: "#e5e7eb",
-              }}
-            />
-          </div>
-
-                    {/* Belum punya akun */}
-
-          <div
-            style={{
-              textAlign: "center",
-              marginBottom: "20px",
-              fontSize: "14px",
-              color: "#6b7280",
-            }}
-          >
-            Belum punya akun?{" "}
-            <button
-              type="button"
-              style={{
-                border: "none",
-                background: "transparent",
-                color: "#2563eb",
-                fontWeight: 700,
-                cursor: "pointer",
-                padding: 0,
-              }}
-            >
-              Daftar
-            </button>
-          </div>
-
         </form>
 
-        {/* Footer */}
+        {/* FOOTER */}
 
         <div
           style={{
-            borderTop: "1px solid #e5e7eb",
-            paddingTop: "18px",
+            marginTop: 30,
             textAlign: "center",
+            color: "#888",
+            fontSize: 13,
           }}
         >
-          <div
-            style={{
-              fontSize: "13px",
-              color: "#6b7280",
-            }}
-          >
-            🔒 Login aman menggunakan SSL/TLS
-          </div>
-
-          <div
-            style={{
-              marginTop: "10px",
-              fontSize: "12px",
-              color: "#9ca3af",
-              lineHeight: "18px",
-            }}
-          >
-            Warehouse Management System
-            <br />
-            Version 1.0
-          </div>
+          Warehouse Management System
+          <br />
+          Version 1.0
         </div>
-
       </div>
-
     </div>
-
   );
 }
