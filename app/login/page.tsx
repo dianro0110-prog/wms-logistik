@@ -20,12 +20,10 @@
 
   export default function LoginPage() {
 
-    const isMobileApp =
-      Capacitor.getPlatform() === "android" ||
-      Capacitor.getPlatform() === "ios";
+    
 
     const router = useRouter();
-
+const [isMobileApp, setIsMobileApp] = useState<boolean | null>(null);
     const [tab, setTab] = useState<"login" | "register">("login");
 
     // LOGIN
@@ -46,17 +44,26 @@
     const [mounted, setMounted] = useState(false);
     const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
+    
     useEffect(() => {
-      setMounted(true);
+  setMounted(true);
 
-      setCurrentTime(new Date());
+  setCurrentTime(new Date());
 
-      const timer = setInterval(() => {
-        setCurrentTime(new Date());
-      }, 1000);
+  // Tunggu Capacitor siap
+  const platform = Capacitor.getPlatform();
 
-      return () => clearInterval(timer);
-    }, []);
+  setIsMobileApp(
+    platform === "android" ||
+    platform === "ios"
+  );
+
+  const timer = setInterval(() => {
+    setCurrentTime(new Date());
+  }, 1000);
+
+  return () => clearInterval(timer);
+}, []);
 
     // ============================
     // LOGIN
@@ -100,7 +107,7 @@
       data.session?.access_token || ""
     );
 
-    router.push("/dashboard");
+    router.push("/welcome");
   };
 
     // ============================
@@ -179,6 +186,25 @@
   MOBILE CAPACITOR VIEW
   ================================
   */
+
+if (isMobileApp === null) {
+  return (
+    <div
+      style={{
+        height: "100vh",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        background: "#03163f",
+        color: "#fff",
+        fontSize: 20,
+        fontWeight: "bold",
+      }}
+    >
+      Loading...
+    </div>
+  );
+}
 
   if (isMobileApp) {
     return (
@@ -445,7 +471,7 @@
       >
         <li>Masukkan Email</li>
         <li>Masukkan Password</li>
-        <li>Klik Masuk ke Dashboard</li>
+        <li>Klik Masuk ke Wms</li>
       </ul>
     </div>
 
@@ -655,7 +681,7 @@
               gap: "10px",
             }}
           >
-            {loading ? "Loading..." : "Masuk ke Dashboard"}
+            {loading ? "Loading..." : "Masuk ke Wms"}
 
             {!loading && <ArrowRight size={18} />}
           </button>
@@ -858,5 +884,6 @@
       </div>
   </div>
   </div>
+  
     );
   }

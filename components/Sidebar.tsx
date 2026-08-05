@@ -92,29 +92,8 @@ const handleLogout = async () => {
 
       <nav className="p-4 space-y-2 flex-1 overflow-y-auto">
 
-  {/* DASHBOARD */}
-  <Link
-    href="/dashboard"
-    className="flex items-center gap-3 px-3 py-2 rounded hover:bg-slate-800"
-  >
-    <LayoutDashboard size={18} />
-    {!collapsed && "Dashboard"}
-  </Link>
+ 
 
-  {/* MENU UTAMA */}
-  <button
-    onClick={() => setOpenMenu(!openMenu)}
-    className="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-slate-800"
-  >
-    <div className="flex items-center gap-3">
-      <Menu size={18} />
-      {!collapsed && "Menu"}
-    </div>
-    {!collapsed && <span>{openMenu ? "▲" : "▼"}</span>}
-  </button>
-
-  {/* SEMUA MENU DIBUNGKUS */}
-  {!collapsed && openMenu && (
     <div className="ml-4 space-y-2">
 
       {/* MASTER */}
@@ -255,7 +234,7 @@ const handleLogout = async () => {
       </Link>
 
     </div>
-  )}
+  
 
 </nav>
 
