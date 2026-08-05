@@ -15,9 +15,40 @@ export default function UploadOrderPage() {
     order_no: "",
     customer: "",
     sku: "",
-    item_name: "",
+    deskripsi: "",
     qty: "",
   });
+
+  async function lookupProduct(sku: string) {
+  if (!sku.trim()) return;
+
+  const { data, error } = await supabase
+    .from("product")
+    .select("deskripsi")
+    .eq("sku", sku.trim())
+    .maybeSingle();
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  if (data) {
+    setManualForm((prev) => ({
+      ...prev,
+      sku: sku,
+      deskripsi: data.deskripsi || "",
+    }));
+  } else {
+    alert("SKU tidak ditemukan");
+
+    setManualForm((prev) => ({
+      ...prev,
+      sku: sku,
+      deskripsi: "",
+    }));
+  }
+}
 
   const downloadTemplate = () => {
     const templateData = [
@@ -25,14 +56,14 @@ export default function UploadOrderPage() {
         order_no: "SO001",
         customer: "PT ABC",
         sku: "SKU001",
-        item_name: "Produk A",
+        deskripsi: "Produk A",
         qty: 10,
       },
       {
         order_no: "SO001",
         customer: "PT ABC",
         sku: "SKU002",
-        item_name: "Produk B",
+        deskripsi: "Produk B",
         qty: 5,
       },
     ];
@@ -97,7 +128,7 @@ export default function UploadOrderPage() {
     if (
       !manualForm.order_no.trim() ||
       !manualForm.sku.trim() ||
-      !manualForm.item_name.trim()
+      !manualForm.deskripsi.trim()
     ) {
       alert(
         "Order No, SKU dan Item Name wajib diisi"
@@ -111,7 +142,7 @@ export default function UploadOrderPage() {
         order_no: manualForm.order_no,
         customer: manualForm.customer,
         sku: manualForm.sku,
-        item_name: manualForm.item_name,
+        deskripsi: manualForm.deskripsi,
         qty: Number(manualForm.qty || 0),
       },
     ]);
@@ -120,7 +151,7 @@ export default function UploadOrderPage() {
       order_no: "",
       customer: "",
       sku: "",
-      item_name: "",
+      deskripsi: "",
       qty: "",
     });
   };
@@ -174,19 +205,14 @@ export default function UploadOrderPage() {
           }
         }
 
-        const { error: detailError } =
-          await supabase
-            .from("order_detail")
-            .insert({
-              order_no: orderNo,
-              sku: row.sku || "",
-              item_name:
-                row.item_name || "",
-              qty_order: Number(
-                row.qty || 0
-              ),
-            });
-
+       const { error: detailError } = await supabase
+  .from("order_detail")
+  .insert({
+    order_no: orderNo,
+    sku: row.sku || "",
+    deskripsi: row.deskripsi || "",
+    qty_order: Number(row.qty || 0),
+  });
         if (detailError) {
           console.error(
             "Detail Error:",
@@ -223,90 +249,93 @@ export default function UploadOrderPage() {
       </div>
 
       {/* Input Manual */}
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 className="text-lg font-bold mb-4">
-          Input Order Manual
-        </h2>
+     <div className="bg-white rounded-lg shadow p-6 mb-6">
+  <h2 className="text-lg font-bold mb-4">
+    Input Order Manual
+  </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-          <input
-            type="text"
-            placeholder="Order No"
-            value={manualForm.order_no}
-            onChange={(e) =>
-              setManualForm({
-                ...manualForm,
-                order_no: e.target.value,
-              })
-            }
-            className="border rounded p-2"
-          />
+  <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
 
-          <input
-            type="text"
-            placeholder="Customer"
-            value={manualForm.customer}
-            onChange={(e) =>
-              setManualForm({
-                ...manualForm,
-                customer: e.target.value,
-              })
-            }
-            className="border rounded p-2"
-          />
+    <input
+      type="text"
+      placeholder="Order No"
+      value={manualForm.order_no}
+      onChange={(e) =>
+        setManualForm({
+          ...manualForm,
+          order_no: e.target.value,
+        })
+      }
+      className="border rounded p-2"
+    />
 
-          <input
-            type="text"
-            placeholder="SKU"
-            value={manualForm.sku}
-            onChange={(e) =>
-              setManualForm({
-                ...manualForm,
-                sku: e.target.value,
-              })
-            }
-            className="border rounded p-2"
-          />
+    <input
+      type="text"
+      placeholder="Customer"
+      value={manualForm.customer}
+      onChange={(e) =>
+        setManualForm({
+          ...manualForm,
+          customer: e.target.value,
+        })
+      }
+      className="border rounded p-2"
+    />
 
-          <input
-            type="text"
-            placeholder="Item Name"
-            value={manualForm.item_name}
-            onChange={(e) =>
-              setManualForm({
-                ...manualForm,
-                item_name: e.target.value,
-              })
-            }
-            className="border rounded p-2"
-          />
+    <input
+      type="text"
+      placeholder="SKU"
+      value={manualForm.sku}
+      onChange={(e) =>
+        setManualForm({
+          ...manualForm,
+          sku: e.target.value,
+        })
+      }
+      className="border rounded p-2"
+    />
 
-          <input
-            type="number"
-            placeholder="Qty"
-            value={manualForm.qty}
-            onChange={(e) =>
-              setManualForm({
-                ...manualForm,
-                qty: e.target.value,
-              })
-            }
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                addManualRow();
-              }
-            }}
-            className="border rounded p-2"
-          />
-        </div>
+    <input
+      type="text"
+      placeholder="Deskripsi"
+      value={manualForm.deskripsi}
+      onChange={(e) =>
+        setManualForm({
+          ...manualForm,
+          deskripsi: e.target.value,
+        })
+      }
+      className="border rounded p-2"
+    />
 
-        <button
-          onClick={addManualRow}
-          className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
-        >
-          + Tambah ke List
-        </button>
-      </div>
+    <input
+      type="number"
+      placeholder="Qty"
+      value={manualForm.qty}
+      onChange={(e) =>
+        setManualForm({
+          ...manualForm,
+          qty: e.target.value,
+        })
+      }
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          addManualRow();
+        }
+      }}
+      className="border rounded p-2"
+    />
+
+  </div>
+
+  <button
+    onClick={addManualRow}
+    className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+  >
+    + Tambah ke List
+  </button>
+</div>
+        
 
       {/* Upload Excel */}
       <div className="bg-white rounded-lg shadow p-6">
@@ -408,7 +437,7 @@ export default function UploadOrderPage() {
                     </td>
 
                     <td className="border p-2">
-                      {row.item_name}
+                      {row.deskripsi}
                     </td>
 
                     <td className="border p-2 text-center">

@@ -8,10 +8,14 @@ interface AllocationItem {
   id: number;
   order_no: string;
   sku: string;
-  item_name: string;
+  deskripsi?: string;
   location: string;
   qty_allocated: number;
   qty_picked: number;
+
+  product?: {
+    deskripsi?: string;
+  };
 }
 
 export default function PickingPage() {
@@ -46,23 +50,41 @@ export default function PickingPage() {
         return;
       }
 
-      const { error: pickingError } = await supabase
-  .from("picking")
-  .insert({
-    order_no: currentItem.order_no,
-    sku: currentItem.sku,
-    item_name: currentItem.item_name,
-    location: currentItem.location,
-    qty_picked: pickQty,
-    picked_by: UserActivation,
-    picked_at: new Date().toISOString(),
-    status: "PICKED",
-  });
+  async function loadData() {
+  try {
+    setLoading(true);
 
-if (pickingError) {
-  console.error(pickingError);
-  alert(pickingError.message);
-  return;
+    const { data, error } = await supabase
+      .from("allocation")
+      .select(`
+        *,
+        product (
+          
+          deskripsi
+        )
+      `)
+      .eq("order_no", orderNo)
+      .order("location", { ascending: true });
+
+    if (error) {
+      console.error(error);
+      alert(error.message);
+      return;
+    }
+
+    const result = (data || []).filter(
+      (x) =>
+        Number(x.qty_picked || 0) <
+        Number(x.qty_allocated || 0)
+    );
+
+    setItems(result);
+
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
 }
 
       setItems(data || []);
@@ -111,19 +133,40 @@ if (pickingError) {
       return;
     }
 
-    if (qty > currentItem.qty_allocated) {
-      alert(
-        `Qty tidak boleh melebihi allocated (${currentItem.qty_allocated})`
-      );
-      return;
-    }
+    const totalPicked =
+  Number(currentItem.qty_picked || 0) + qty;
+
+if (totalPicked > currentItem.qty_allocated) {
+  alert(
+    `Qty melebihi allocated (${currentItem.qty_allocated})`
+  );
+  return;
+}
 
     const { error } = await supabase
-      .from("allocation")
-      .update({
-        qty_picked: qty,
-      })
-      .eq("id", currentItem.id);
+     
+  .from("allocation")
+  .update({
+    qty_picked: totalPicked,
+  })
+  .eq("id", currentItem.id);
+
+      const { error: pickingError } = await supabase
+  .from("picking")
+  .insert({
+    order_no: currentItem.order_no,
+    sku: currentItem.sku,
+    location: currentItem.location,
+    qty_picked: qty,
+    picked_at: new Date().toISOString(),
+    
+  });
+
+if (pickingError) {
+  console.error(pickingError);
+  alert(pickingError.message);
+  return;
+}
 
     if (error) {
       console.error(error);
@@ -154,10 +197,16 @@ if (pickingError) {
     try {
       setSaving(true);
 
-      const { data } = await supabase
-        .from("allocation")
-        .select("*")
-        .eq("order_no", orderNo);
+      const { data, error } = await supabase
+  .from("allocation")
+  .select(`
+    *,
+    product (
+      deskripsi
+    )
+  `)
+  .eq("order_no", orderNo)
+  .order("location");
 
       const notPicked =
         data?.filter(
@@ -289,11 +338,21 @@ if (pickingError) {
 
               <div>
                 <label className="font-semibold">
-                  Item
+                
                 </label>
 
                 <div>
-                  {currentItem.item_name}
+
+                  <div>
+  <label className="font-semibold">
+    Deskripsi
+  </label>
+
+  <div>
+    {currentItem.product?.deskripsi}
+  </div>
+</div>
+                  {currentItem.product?.deskripsi || currentItem.deskripsi}
                 </div>
               </div>
 

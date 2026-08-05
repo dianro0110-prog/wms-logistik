@@ -8,7 +8,7 @@ interface OrderDetail {
   id: number;
   order_no: string;
   sku: string;
-  item_name: string;
+  deskripsi: string;
   qty_order: number;
   qty_allocated: number;
 }
@@ -74,7 +74,7 @@ async function allocateOrder() {
           .insert({
             order_no: item.order_no,
             sku: item.sku,
-            item_name: item.item_name,
+            deskripsi: item.deskripsi,
             location: inventoryData.location,
             qty_allocated: item.qty_order,
           });
@@ -262,7 +262,7 @@ async function allocateOrder() {
                   </td>
 
                   <td className="border p-2">
-                    {item.item_name}
+                    {item.deskripsi}
                   </td>
 
                   <td className="border p-2 text-center">
