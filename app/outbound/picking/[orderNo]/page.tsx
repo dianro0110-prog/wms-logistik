@@ -440,19 +440,6 @@ await supabase
   placeholder="Scan SKU"
 />
 
-<div className="mb-4">
-
-  <label className="block mb-2">
-    Deskripsi
-  </label>
-
-  <input
-    value={deskripsi}
-    readOnly
-    className="border p-2 rounded w-full bg-gray-100"
-  />
-
-</div>
 
             </div>
 
