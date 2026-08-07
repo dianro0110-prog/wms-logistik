@@ -147,7 +147,7 @@ const handleLogout = async () => {
       >
         <div className="flex items-center gap-3">
           <ArrowDownCircle size={18} />
-          Barang Masuk
+          Inbound
         </div>
         <span>{openInbound ? "▲" : "▼"}</span>
       </button>
@@ -161,7 +161,13 @@ const handleLogout = async () => {
             Checking
           </Link>
           <Link href="/inbound/putaway" className="block px-3 py-2 hover:bg-slate-800 rounded">
+          Checking Report
+          </Link>
+          <Link href="/inbound/putaway" className="block px-3 py-2 hover:bg-slate-800 rounded">
             Putaway
+          </Link>
+          <Link href="/inbound/putaway" className="block px-3 py-2 hover:bg-slate-800 rounded">
+            Putaway Report
           </Link>
         </div>
       )}
@@ -199,7 +205,7 @@ const handleLogout = async () => {
       >
         <div className="flex items-center gap-3">
           <ArrowUpCircle size={18} />
-          Barang Keluar
+          Outbound
         </div>
         <span>{openOutbound ? "▲" : "▼"}</span>
       </button>
@@ -217,10 +223,49 @@ const handleLogout = async () => {
           <Link href="/outbound/picking" className="block px-3 py-2 hover:bg-slate-800 rounded">
             Picking
           </Link>
+          <Link href="/outbound/picking-report" className="block px-3 py-2 hover:bg-slate-800 rounded">
+            Picking Report
+          </Link>
 
           <Link href="/outbound/packing" className="block px-3 py-2 hover:bg-slate-800 rounded">
             Packing
           </Link>
+          <Link href="/outbound/packing-report" className="block px-3 py-2 hover:bg-slate-800 rounded">
+            Packing Report
+          </Link>
+        </div>
+      )}
+
+{/* SHIPMENT */}
+<button
+        onClick={() => setOpenOutbound(!openOutbound)}
+        className="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-slate-800"
+      >
+        <div className="flex items-center gap-3">
+          <ArrowUpCircle size={18} />
+          Shipment
+        </div>
+        <span>{openOutbound ? "▲" : "▼"}</span>
+      </button>
+
+      {openOutbound && (
+        <div className="ml-6 space-y-1">
+          <Link href="/outbound/upload" className="block px-3 py-2 hover:bg-slate-800 rounded">
+            Shipment Online
+          </Link>
+
+          <Link href="/outbound/orders" className="block px-3 py-2 hover:bg-slate-800 rounded">
+            Shipment Online Report
+          </Link>
+
+          <Link href="/outbound/picking" className="block px-3 py-2 hover:bg-slate-800 rounded">
+            Shipment Offline
+          </Link>
+          <Link href="/outbound/picking" className="block px-3 py-2 hover:bg-slate-800 rounded">
+            Shipment Offline Report
+          </Link>
+
+          
         </div>
       )}
 

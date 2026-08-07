@@ -43,34 +43,21 @@ export default function CheckingPage() {
   const [deskripsi, setDeskripsi] = useState("");
 
   // ================= LOAD RECEIVINGS =================
- async function loadReceivings() {
-const { data: checked } = await supabase
-.from("checking")
-.select("receiving_id");
+async function loadReceivings() {
+  const { data, error } = await supabase
+    .from("receivings")
+    .select("id, receiving_no, supplier_name")
+    .neq("status", "Checking Complete")
+    .order("id", { ascending: false });
 
-const checkedIds = (checked || []).map(
-(x: any) => x.receiving_id
-);
+  if (error) {
+    console.error(error);
+    return;
+  }
 
-let query = supabase
-.from("receivings")
-.select("id, receiving_no, supplier_name");
-
-if (checkedIds.length > 0) {
-query = query.not("id", "in", `(${checkedIds.join(",")})`);
+  setReceivings(data ?? []);
 }
 
-const { data, error } = await query.order("id", {
-ascending: false,
-});
-
-if (error) {
-console.error(error);
-return;
-}
-
-setReceivings(data || []);
-}
 
 
   // ================= LOAD DETAILS =================
@@ -167,10 +154,36 @@ setReceivings(data || []);
       return alert(error.message);
     }
 
-    await supabase
+   // Ambil seluruh detail receiving
+const { data: details } = await supabase
+  .from("receiving_details")
+  .select("sku, quantity")
+  .eq("receiving_id", selectedReceivingId);
+
+// Ambil seluruh checking detail yang sudah tersimpan
+const { data: checkingDetails } = await supabase
+  .from("checking_details")
+  .select("sku, quantity")
+  .eq("receiving_id", selectedReceivingId);
+
+let selesai = true;
+
+for (const item of details || []) {
+  const totalChecking =
+    (checkingDetails || [])
+      .filter(c => c.sku === item.sku)
+      .reduce((a, b) => a + b.quantity, 0);
+
+  if (totalChecking < item.quantity) {
+    selesai = false;
+    break;
+  }
+}
+
+await supabase
   .from("receivings")
   .update({
-    status: "Checking",
+    status: selesai ? "Checking Complete" : "Checking Process",
   })
   .eq("id", selectedReceivingId);
 

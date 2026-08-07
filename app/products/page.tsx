@@ -152,7 +152,7 @@ export default function ProductPage() {
       Papa.parse(file, {
         header: true,
         skipEmptyLines: true,
-        delimiter: "",
+        delimiter: ";",
 
         complete: async (res: any) => {
           await processData(res.data);

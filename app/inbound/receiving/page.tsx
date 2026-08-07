@@ -297,7 +297,7 @@ RCV001;Supplier A;Open;SKU002;Contoh Barang; 2`;
 
         <div className="flex items-center gap-3">
           <button
-            onClick={() => router.push("/dashboard")}
+            onClick={() => router.push("/system")}
             className="bg-gray-600 text-white px-3 py-2 rounded flex items-center gap-2"
           >
             <ArrowLeft size={18} />

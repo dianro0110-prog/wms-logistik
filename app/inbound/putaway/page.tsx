@@ -25,14 +25,19 @@ export default function PutawayPage() {
     (v ?? "").toString().trim().toLowerCase();
 
   // ================= RECEIVING =================
-  async function loadReceivingList() {
-    const { data } = await supabase
-      .from("receivings")
-      .select("receiving_no")
-      .in("status", ["Checking", "Putaway"]);
+ async function loadReceivingList() {
+  const { data, error } = await supabase
+    .from("receivings")
+    .select("receiving_no")
+    .in("status", ["Checking", "Checking Complete", "Putaway"]);
 
-    setReceivings(data?.map((x) => x.receiving_no) || []);
+  if (error) {
+    console.error(error);
+    return;
   }
+
+  setReceivings(data?.map((x) => x.receiving_no) || []);
+}
 
   // ================= CHECKING =================
   async function loadChecking(receiving_no: string) {
@@ -259,7 +264,7 @@ export default function PutawayPage() {
       {/* HEADER */}
       <div className="flex items-center gap-3">
         <button
-          onClick={() => router.push("/dashboard")}
+          onClick={() => router.push("/system")}
           className="flex items-center gap-2 bg-gray-600 text-white px-3 py-2 rounded"
         >
           <ArrowLeft size={18} />

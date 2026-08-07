@@ -29,11 +29,27 @@ export default function PickingPage() {
 
   const [items, setItems] = useState<AllocationItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-
+  
   const [scanLocation, setScanLocation] = useState("");
   const [scanSku, setScanSku] = useState("");
+  const [deskripsi, setDeskripsi] = useState("");
   const [pickQty, setPickQty] = useState("");
 
+const [products, setProducts] = useState<any[]>([]);
+
+async function loadProducts() {
+  const { data, error } = await supabase
+    .from("product")
+    .select("sku, deskripsi");
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  setProducts(data || []);
+}
+  
   async function loadData() {
     try {
       setLoading(true);
@@ -151,7 +167,17 @@ if (totalPicked > currentItem.qty_allocated) {
   })
   .eq("id", currentItem.id);
 
-      const { error: pickingError } = await supabase
+   const {
+  data: { user },
+} = await supabase.auth.getUser();
+
+const { data: profile } = await supabase
+  .from("profiles")
+  .select("username")
+  .eq("id", user?.id)
+  .single();
+
+await supabase
   .from("picking")
   .insert({
     order_no: currentItem.order_no,
@@ -159,14 +185,10 @@ if (totalPicked > currentItem.qty_allocated) {
     location: currentItem.location,
     qty_picked: qty,
     picked_at: new Date().toISOString(),
-    
+    picked_by: profile?.username,
   });
 
-if (pickingError) {
-  console.error(pickingError);
-  alert(pickingError.message);
-  return;
-}
+
 
     if (error) {
       console.error(error);
@@ -398,15 +420,39 @@ if (pickingError) {
               </label>
 
               <input
-                value={scanSku}
-                onChange={(e) =>
-                  setScanSku(
-                    e.target.value
-                  )
-                }
-                className="border p-2 rounded w-full"
-                placeholder="Scan SKU"
-              />
+  value={scanSku}
+  onChange={(e) => {
+
+    const value = e.target.value;
+
+    setScanSku(value);
+
+    const product = products.find(
+      (p) =>
+        p.sku?.trim().toUpperCase() ===
+        value.trim().toUpperCase()
+    );
+
+    setDeskripsi(product?.deskripsi || "");
+
+  }}
+  className="border p-2 rounded w-full"
+  placeholder="Scan SKU"
+/>
+
+<div className="mb-4">
+
+  <label className="block mb-2">
+    Deskripsi
+  </label>
+
+  <input
+    value={deskripsi}
+    readOnly
+    className="border p-2 rounded w-full bg-gray-100"
+  />
+
+</div>
 
             </div>
 

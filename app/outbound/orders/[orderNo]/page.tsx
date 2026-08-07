@@ -49,41 +49,68 @@ export default function OrderDetailPage() {
 
 async function allocateOrder() {
   try {
-
+setAllocating(true);
     for (const item of details) {
 
       // Cari stok inventory berdasarkan SKU
-      const { data: inventoryData, error: inventoryError } =
-        await supabase
-          .from("inventory")
-          .select("*")
-          .eq("sku", item.sku.trim())
-          .single();
+      const { data: inventories, error: inventoryError } =
+  await supabase
+    .from("inventory")
+    .select("*")
+    .eq("sku", item.sku.trim())
+    .order("location");
 
-      if (inventoryError || !inventoryData) {
-        alert(
-          `Inventory tidak ditemukan untuk SKU ${item.sku}`
-        );
-        return;
-      }
+if (inventoryError || !inventories || inventories.length === 0) {
+  alert(`Inventory tidak ditemukan untuk SKU ${item.sku}`);
+  return;
 
-      // Simpan allocation + location
-      const { error: allocationError } =
-        await supabase
-          .from("allocation")
-          .insert({
-            order_no: item.order_no,
-            sku: item.sku,
-            deskripsi: item.deskripsi,
-            location: inventoryData.location,
-            qty_allocated: item.qty_order,
-          });
+  
+}
 
-      if (allocationError) {
-        console.error(allocationError);
-        alert(allocationError.message);
-        return;
-      }
+let remaining = item.qty_order;
+
+for (const inv of inventories) {
+  if (remaining <= 0) break;
+
+  const allocQty = Math.min(inv.quantity, remaining);
+
+  // 1. Simpan allocation
+  const { error: allocationError } = await supabase
+    .from("allocation")
+    .insert({
+      order_no: item.order_no,
+      sku: item.sku,
+      deskripsi: item.deskripsi,
+      location: inv.location,
+      qty_allocated: allocQty,
+    });
+
+  if (allocationError) {
+    alert(allocationError.message);
+    return;
+
+    
+  }
+
+  // 2. Kurangi stok inventory
+  const newQty = inv.quantity - allocQty;
+
+  const { error: updateInventoryError } = await supabase
+    .from("inventory")
+    .update({
+      quantity: newQty,
+    })
+    .eq("id", inv.id);
+
+  if (updateInventoryError) {
+    alert(updateInventoryError.message);
+    return;
+  }
+
+  // 3. Kurangi sisa order yang belum dialokasikan
+  remaining -= allocQty;
+}
+
 
       // Update order_detail
       const { error: detailError } =
@@ -280,4 +307,5 @@ async function allocateOrder() {
       </div>
     </div>
   );
+  
 }
