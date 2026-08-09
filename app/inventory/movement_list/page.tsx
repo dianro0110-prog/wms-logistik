@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabase";
+import { ArrowLeftCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 type Movement = {
@@ -64,11 +65,12 @@ export default function MovementListPage() {
       {/* BACK BUTTON */}
       <div className="mb-4">
         <button
-          onClick={() => router.back()}
-          className="bg-gray-700 text-white px-3 py-2 rounded"
-        >
-          ← Back
-        </button>
+  onClick={() => router.back()}
+  className="flex items-center gap-2 bg-gray-500 text-white px-3 py-2 rounded-lg hover:bg-gray-600 transition"
+>
+  <ArrowLeftCircle size={20} />
+  <span>Back</span>
+</button>
       </div>
 
       {/* TITLE */}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { X } from "lucide-react";
+import { ArrowLeftCircle, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
 import * as XLSX from "xlsx";
@@ -258,7 +258,7 @@ const [showDetail, setShowDetail] =
       onClick={() => router.back()}
       className="flex items-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition"
     >
-      <ArrowLeft size={18} />
+      <ArrowLeftCircle size={18} />
       Back
     </button>
 

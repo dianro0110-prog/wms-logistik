@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowLeftCircle } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 
 export default function PutawayPage() {
@@ -267,7 +267,7 @@ export default function PutawayPage() {
           onClick={() => router.push("/system")}
           className="flex items-center gap-2 bg-gray-600 text-white px-3 py-2 rounded"
         >
-          <ArrowLeft size={18} />
+          <ArrowLeftCircle size={18} />
           Back
         </button>
 

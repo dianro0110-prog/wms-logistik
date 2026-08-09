@@ -469,7 +469,7 @@ if (isMobileApp === null) {
           color: "#555",
         }}
       >
-        <li>Masukkan Email</li>
+        <li>Masukkan Username</li>
         <li>Masukkan Password</li>
         <li>Klik Masuk ke Wms</li>
       </ul>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowLeftCircle } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 
 interface OrderHeader {
@@ -81,11 +82,12 @@ export default function PackingListPage() {
           </button>
 
           <button
-            onClick={() => router.back()}
-            className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800"
-          >
-            Back
-          </button>
+  onClick={() => router.back()}
+  className="flex items-center gap-2 bg-gray-500 text-white px-3 py-2 rounded-lg hover:bg-gray-600 transition"
+>
+  <ArrowLeftCircle size={20} />
+  <span>Back</span>
+</button>
 
         </div>
 

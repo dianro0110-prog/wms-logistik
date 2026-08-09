@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Trash2, ArrowLeft } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, ArrowLeftCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import * as Papa from "papaparse";
@@ -189,8 +189,8 @@ export default function ProductPage() {
         onClick={() => router.back()}
         className="flex items-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded text-sm"
       >
-        <ArrowLeft size={18} />
-        Kembali
+        <ArrowLeftCircle size={18} />
+        Back
       </button>
 
       <h1 className="text-xl font-bold">

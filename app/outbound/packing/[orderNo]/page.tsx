@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { ArrowLeftCircle } from "lucide-react";
 import { supabase } from "../../../../lib/supabase";
 
 interface PackingItem {
@@ -275,11 +276,12 @@ export default function PackingPage() {
         <div className="flex gap-2">
 
           <button
-            onClick={() => router.back()}
-            className="bg-gray-600 text-white px-4 py-2 rounded"
-          >
-            Back
-          </button>
+  onClick={() => router.back()}
+  className="flex items-center gap-2 bg-gray-500 text-white px-3 py-2 rounded-lg hover:bg-gray-600 transition"
+>
+  <ArrowLeftCircle size={20} />
+  <span>Back</span>
+</button>
 
           <button
             onClick={finishPacking}

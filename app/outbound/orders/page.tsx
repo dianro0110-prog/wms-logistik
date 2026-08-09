@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowLeftCircle } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 
 interface OrderHeader {
@@ -94,28 +95,38 @@ export default function OrdersPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">
-          Order List
-        </h1>
+    
+{/* Header */}
 
-        <div className="flex gap-2">
-          <button
-            onClick={loadOrders}
-            className="bg-green-600 text-white px-4 py-2 rounded"
-          >
-            Refresh
-          </button>
+<div className="mb-6">
 
-          <button
-            onClick={() => router.back()}
-            className="bg-gray-700 text-white px-4 py-2 rounded"
-          >
-            ← Back
-          </button>
-        </div>
-      </div>
+  {/* Tombol Back */}
+  <button
+    onClick={() => router.back()}
+    className="flex items-center gap-2 bg-gray-500 text-white px-3 py-2 rounded-lg hover:bg-gray-600 transition"
+  >
+    <ArrowLeftCircle size={20} />
+    <span>Back</span>
+  </button>
+
+  {/* Judul + Refresh */}
+  <div className="flex justify-between items-center mt-4">
+
+    <h1 className="text-2xl font-bold">
+      Order List
+    </h1>
+
+    <button
+      onClick={loadOrders}
+      className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+    >
+      Refresh
+    </button>
+
+  </div>
+
+</div>
+
 
       {/* Search */}
       <div className="bg-white rounded-lg shadow p-4 mb-5">
@@ -296,5 +307,5 @@ export default function OrdersPage() {
         </table>
       </div>
     </div>
-  );
-}
+  )}
+

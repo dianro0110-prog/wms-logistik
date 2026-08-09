@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import * as XLSX from "xlsx";
+import { ArrowLeftCircle } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 
 export default function UploadOrderPage() {
@@ -234,19 +235,22 @@ export default function UploadOrderPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">
-          Upload Orders
-        </h1>
+    {/* Header */}
+<div className="mb-6">
 
-        <button
-          onClick={() => router.back()}
-          className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800"
-        >
-          ← Back
-        </button>
-      </div>
+  <button
+    onClick={() => router.back()}
+    className="flex items-center gap-2 bg-gray-500 text-white px-3 py-2 rounded-lg hover:bg-gray-600 transition"
+  >
+    <ArrowLeftCircle size={20} />
+    <span>Back</span>
+  </button>
+
+  <h1 className="text-2xl font-bold mt-4">
+    Upload Orders
+  </h1>
+
+</div>
 
       {/* Input Manual */}
      <div className="bg-white rounded-lg shadow p-6 mb-6">

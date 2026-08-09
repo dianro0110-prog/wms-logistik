@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowLeftCircle } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 
 export default function PickingListPage() {
@@ -40,11 +41,12 @@ export default function PickingListPage() {
         </h1>
 
         <button
-          onClick={() => router.back()}
-          className="bg-gray-700 text-white px-4 py-2 rounded"
-        >
-          Back
-        </button>
+  onClick={() => router.back()}
+  className="flex items-center gap-2 bg-gray-500 text-white px-3 py-2 rounded-lg hover:bg-gray-600 transition"
+>
+  <ArrowLeftCircle size={20} />
+  <span>Back</span>
+</button>
       </div>
 
       <div className="bg-white rounded shadow overflow-x-auto">

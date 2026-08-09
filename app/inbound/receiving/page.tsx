@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowLeftCircle } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
@@ -300,7 +300,7 @@ RCV001;Supplier A;Open;SKU002;Contoh Barang; 2`;
             onClick={() => router.push("/system")}
             className="bg-gray-600 text-white px-3 py-2 rounded flex items-center gap-2"
           >
-            <ArrowLeft size={18} />
+            <ArrowLeftCircle size={18} />
             Back
           </button>
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabase";
+import { ArrowLeftCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 type Receiving = {
@@ -205,11 +206,12 @@ setSelectedReceivingNo("");
     <div className="max-w-4xl mx-auto p-6 space-y-4">
 
       <button
-        onClick={() => router.back()}
-        className="bg-gray-500 text-white px-3 py-1 rounded"
-      >
-        ← Back
-      </button>
+  onClick={() => router.back()}
+  className="flex items-center gap-2 bg-gray-500 text-white px-3 py-2 rounded-lg hover:bg-gray-600 transition"
+>
+  <ArrowLeftCircle size={20} />
+  <span>Back</span>
+</button>
 
       <h1 className="text-2xl font-bold">Checking Inbound</h1>
 
