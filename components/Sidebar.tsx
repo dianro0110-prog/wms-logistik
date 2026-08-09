@@ -28,6 +28,7 @@ export default function Sidebar() {
   const [openInbound, setOpenInbound] = useState(false);
   const [openInventory, setOpenInventory] = useState(false);
   const [openOutbound, setOpenOutbound] = useState(false);
+  const [openshipment, setOpenshipment] = useState(false);
 const router = useRouter();
 
 const [userName, setUserName] = useState("Loading...");
@@ -238,30 +239,30 @@ const handleLogout = async () => {
 
 {/* SHIPMENT */}
 <button
-        onClick={() => setOpenOutbound(!openOutbound)}
+        onClick={() => setOpenshipment(!openshipment)}
         className="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-slate-800"
       >
         <div className="flex items-center gap-3">
           <ArrowUpCircle size={18} />
           Shipment
         </div>
-        <span>{openOutbound ? "▲" : "▼"}</span>
+        <span>{openshipment ? "▲" : "▼"}</span>
       </button>
 
-      {openOutbound && (
+      {openshipment && (
         <div className="ml-6 space-y-1">
-          <Link href="/outbound/upload" className="block px-3 py-2 hover:bg-slate-800 rounded">
+          <Link href="/shipment/online" className="block px-3 py-2 hover:bg-slate-800 rounded">
             Shipment Online
           </Link>
 
-          <Link href="/outbound/orders" className="block px-3 py-2 hover:bg-slate-800 rounded">
+          <Link href="/shipment/online-report" className="block px-3 py-2 hover:bg-slate-800 rounded">
             Shipment Online Report
           </Link>
 
-          <Link href="/outbound/picking" className="block px-3 py-2 hover:bg-slate-800 rounded">
+          <Link href="/shipment/offline" className="block px-3 py-2 hover:bg-slate-800 rounded">
             Shipment Offline
           </Link>
-          <Link href="/outbound/picking" className="block px-3 py-2 hover:bg-slate-800 rounded">
+          <Link href="/shipment/offline-report" className="block px-3 py-2 hover:bg-slate-800 rounded">
             Shipment Offline Report
           </Link>
 
