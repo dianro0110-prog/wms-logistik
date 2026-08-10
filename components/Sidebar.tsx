@@ -80,7 +80,7 @@ const handleLogout = async () => {
       {/* HEADER */}
       <div className="p-5 border-b border-slate-700 flex items-center justify-between">
         {!collapsed && (
-          <h1 className="text-xl font-bold">WMS LOGISTIK</h1>
+          <h1 className="text-xl font-bold">🚀 Let's Rock</h1>
         )}
 
         <button

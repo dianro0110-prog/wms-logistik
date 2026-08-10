@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowLeft, ArrowLeftCircle } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 
 interface Warehouse {
@@ -136,11 +137,12 @@ export default function WarehousePage() {
     <div className="p-6">
       {/* Tombol Kembali */}
       <button
-        onClick={() => router.back()}
-        className="mb-4 px-4 py-2 border rounded hover:bg-gray-100"
-      >
-        ← Back
-      </button>
+          onClick={() => router.push("/system")}
+            className="bg-gray-600 text-white px-3 py-2 rounded flex items-center gap-2"
+          >
+            <ArrowLeftCircle size={18} />
+            Back
+          </button>
 
       <h1 className="text-2xl font-bold mb-5">
         Warehouse Master

@@ -120,9 +120,16 @@ async function loadProducts() {
 
   const currentItem = items[currentIndex];
 
-  async function confirmItem() {
-    if (!currentItem) return;
+  
+async function confirmItem() {
+  if (!currentItem) return;
 
+  try {
+    setSaving(true);
+
+    // ==========================================
+    // 1. VALIDASI LOCATION
+    // ==========================================
     if (
       scanLocation.trim().toUpperCase() !==
       currentItem.location.trim().toUpperCase()
@@ -133,6 +140,9 @@ async function loadProducts() {
       return;
     }
 
+    // ==========================================
+    // 2. VALIDASI SKU
+    // ==========================================
     if (
       scanSku.trim().toUpperCase() !==
       currentItem.sku.trim().toUpperCase()
@@ -143,78 +153,257 @@ async function loadProducts() {
       return;
     }
 
+    // ==========================================
+    // 3. VALIDASI QTY
+    // ==========================================
     const qty = Number(pickQty);
 
-    if (qty <= 0) {
+    if (!Number.isFinite(qty) || qty <= 0) {
       alert("Qty harus lebih besar dari 0");
       return;
     }
 
+    // ==========================================
+    // 4. CEK QTY ALLOCATION
+    // ==========================================
+    const currentPicked =
+      Number(currentItem.qty_picked || 0);
+
+    const qtyAllocated =
+      Number(currentItem.qty_allocated || 0);
+
     const totalPicked =
-  Number(currentItem.qty_picked || 0) + qty;
+      currentPicked + qty;
 
-if (totalPicked > currentItem.qty_allocated) {
-  alert(
-    `Qty melebihi allocated (${currentItem.qty_allocated})`
-  );
-  return;
-}
-
-    const { error } = await supabase
-     
-  .from("allocation")
-  .update({
-    qty_picked: totalPicked,
-  })
-  .eq("id", currentItem.id);
-
-   const {
-  data: { user },
-} = await supabase.auth.getUser();
-
-const { data: profile } = await supabase
-  .from("profiles")
-  .select("username")
-  .eq("id", user?.id)
-  .single();
-
-await supabase
-  .from("picking")
-  .insert({
-    order_no: currentItem.order_no,
-    sku: currentItem.sku,
-    location: currentItem.location,
-    qty_picked: qty,
-    picked_at: new Date().toISOString(),
-    picked_by: profile?.username,
-  });
-
-
-
-    if (error) {
-      console.error(error);
-      alert(error.message);
+    if (totalPicked > qtyAllocated) {
+      alert(
+        `Qty melebihi allocated.\n\n` +
+        `Allocated : ${qtyAllocated}\n` +
+        `Sudah Pick: ${currentPicked}\n` +
+        `Sisa      : ${qtyAllocated - currentPicked}\n` +
+        `Pick      : ${qty}`
+      );
       return;
     }
 
-    alert("Item berhasil dipick");
+    // ==========================================
+    // 5. CARI INVENTORY BERDASARKAN SKU + LOCATION
+    // ==========================================
+    const { data: inventory, error: inventoryError } =
+      await supabase
+        .from("inventory")
+        .select("id, sku, location, quantity")
+        .eq("sku", currentItem.sku)
+        .eq("location", currentItem.location)
+        .maybeSingle();
 
-    if (currentIndex < items.length - 1) {
-      setCurrentIndex(currentIndex + 1);
+    if (inventoryError) {
+      console.error("Inventory error:", inventoryError);
 
-      setScanLocation("");
-      setScanSku("");
-      setPickQty("");
-
-      loadData();
-    } else {
       alert(
-        "Semua item selesai dipick.\nKlik Finish Picking."
+        `Gagal membaca inventory:\n${inventoryError.message}`
       );
 
-      loadData();
+      return;
     }
+
+    // ==========================================
+    // 6. INVENTORY TIDAK DITEMUKAN
+    // ==========================================
+    if (!inventory) {
+      alert(
+        `Inventory tidak ditemukan!\n\n` +
+        `SKU      : ${currentItem.sku}\n` +
+        `Location : ${currentItem.location}`
+      );
+
+      return;
+    }
+
+    // ==========================================
+    // 7. CEK STOK INVENTORY
+    // ==========================================
+    const currentStock =
+      Number(inventory.quantity || 0);
+
+    if (currentStock < qty) {
+      alert(
+        `Stok inventory tidak cukup!\n\n` +
+        `SKU       : ${currentItem.sku}\n` +
+        `Location  : ${currentItem.location}\n` +
+        `Stok      : ${currentStock}\n` +
+        `Qty Pick  : ${qty}\n` +
+        `Kekurangan: ${qty - currentStock}`
+      );
+
+      return;
+    }
+
+    // ==========================================
+    // 8. HITUNG SISA INVENTORY
+    // ==========================================
+    const newInventoryQuantity =
+      currentStock - qty;
+
+    // ==========================================
+    // 9. KURANGI INVENTORY
+    // ==========================================
+    const { error: updateInventoryError } =
+      await supabase
+        .from("inventory")
+        .update({
+          quantity: newInventoryQuantity,
+        })
+        .eq("id", inventory.id);
+
+    if (updateInventoryError) {
+      console.error(
+        "Update inventory error:",
+        updateInventoryError
+      );
+
+      alert(
+        `Gagal mengurangi inventory:\n${updateInventoryError.message}`
+      );
+
+      return;
+    }
+
+    // ==========================================
+    // 10. UPDATE ALLOCATION
+    // ==========================================
+    const { error: allocationError } =
+      await supabase
+        .from("allocation")
+        .update({
+          qty_picked: totalPicked,
+        })
+        .eq("id", currentItem.id);
+
+    if (allocationError) {
+      console.error(
+        "Allocation error:",
+        allocationError
+      );
+
+      // Jika allocation gagal, kembalikan inventory
+      await supabase
+        .from("inventory")
+        .update({
+          quantity: currentStock,
+        })
+        .eq("id", inventory.id);
+
+      alert(
+        `Gagal update allocation:\n${allocationError.message}`
+      );
+
+      return;
+    }
+
+    // ==========================================
+    // 11. AMBIL USER LOGIN
+    // ==========================================
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    let pickedBy = "Unknown";
+
+    if (user) {
+      const { data: profile } =
+        await supabase
+          .from("profiles")
+          .select("username")
+          .eq("id", user.id)
+          .maybeSingle();
+
+      if (profile?.username) {
+        pickedBy = profile.username;
+      }
+    }
+
+    // ==========================================
+    // 12. INSERT HISTORI PICKING
+    // ==========================================
+    const { error: pickingError } =
+      await supabase
+        .from("picking")
+        .insert({
+          order_no: currentItem.order_no,
+          sku: currentItem.sku,
+          location: currentItem.location,
+          qty_picked: qty,
+          picked_at: new Date().toISOString(),
+          picked_by: pickedBy,
+        });
+
+    if (pickingError) {
+      console.error(
+        "Picking history error:",
+        pickingError
+      );
+
+      // Kembalikan allocation
+      await supabase
+        .from("allocation")
+        .update({
+          qty_picked: currentPicked,
+        })
+        .eq("id", currentItem.id);
+
+      // Kembalikan inventory
+      await supabase
+        .from("inventory")
+        .update({
+          quantity: currentStock,
+        })
+        .eq("id", inventory.id);
+
+      alert(
+        `Gagal menyimpan histori picking:\n${pickingError.message}`
+      );
+
+      return;
+    }
+
+    // ==========================================
+    // 13. BERHASIL
+    // ==========================================
+    alert(
+      `Picking berhasil!\n\n` +
+      `SKU       : ${currentItem.sku}\n` +
+      `Location  : ${currentItem.location}\n` +
+      `Qty Pick  : ${qty}\n\n` +
+      `Inventory : ${currentStock} → ${newInventoryQuantity}`
+    );
+
+    // ==========================================
+    // 14. RESET INPUT
+    // ==========================================
+    setScanLocation("");
+    setScanSku("");
+    setPickQty("");
+    setDeskripsi("");
+
+    // ==========================================
+    // 15. LOAD ULANG DATA
+    // ==========================================
+    await loadData();
+
+  } catch (error) {
+    console.error("Confirm picking error:", error);
+
+    alert(
+      "Terjadi kesalahan saat proses picking."
+    );
+
+  } finally {
+    setSaving(false);
   }
+}
+
+
 
   async function finishPicking() {
     try {

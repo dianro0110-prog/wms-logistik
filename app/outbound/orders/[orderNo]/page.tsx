@@ -47,86 +47,180 @@ export default function OrderDetailPage() {
     }
   }
 
+
+
 async function allocateOrder() {
   try {
-setAllocating(true);
+    setAllocating(true);
+
     for (const item of details) {
+      const sku = item.sku.trim();
+      const orderQty = Number(item.qty_order || 0);
 
-      // Cari stok inventory berdasarkan SKU
+      if (orderQty <= 0) {
+        continue;
+      }
+
+      // ==========================================
+      // CARI INVENTORY BERDASARKAN SKU
+      // ==========================================
       const { data: inventories, error: inventoryError } =
-  await supabase
-    .from("inventory")
-    .select("*")
-    .eq("sku", item.sku.trim())
-    .order("location");
+        await supabase
+          .from("inventory")
+          .select(
+            "id, sku, location, deskripsi, quantity, created_at"
+          )
+          .eq("sku", sku)
+          .gt("quantity", 0)
+          .order("location", {
+            ascending: true,
+          });
 
-if (inventoryError || !inventories || inventories.length === 0) {
-  alert(`Inventory tidak ditemukan untuk SKU ${item.sku}`);
-  return;
+      if (inventoryError) {
+        console.error(inventoryError);
 
-  
-}
+        alert(
+          `Gagal membaca inventory SKU ${sku}:\n${inventoryError.message}`
+        );
 
-let remaining = item.qty_order;
+        return;
+      }
 
-for (const inv of inventories) {
-  if (remaining <= 0) break;
+      if (!inventories || inventories.length === 0) {
+        alert(
+          `Inventory tidak ditemukan untuk SKU ${sku}`
+        );
 
-  const allocQty = Math.min(inv.quantity, remaining);
+        return;
+      }
 
-  // 1. Simpan allocation
-  const { error: allocationError } = await supabase
-    .from("allocation")
-    .insert({
-      order_no: item.order_no,
-      sku: item.sku,
-      deskripsi: item.deskripsi,
-      location: inv.location,
-      qty_allocated: allocQty,
-    });
+      // ==========================================
+      // HITUNG TOTAL STOK
+      // ==========================================
+      const totalStock = inventories.reduce(
+        (sum, inv) =>
+          sum + Number(inv.quantity || 0),
+        0
+      );
 
-  if (allocationError) {
-    alert(allocationError.message);
-    return;
+      // ==========================================
+      // STOK HARUS MENCUKUPI ORDER
+      // ==========================================
+      if (totalStock < orderQty) {
+        alert(
+          `Stok tidak mencukupi!\n\n` +
+          `SKU        : ${sku}\n` +
+          `Qty Order  : ${orderQty}\n` +
+          `Total Stok : ${totalStock}\n` +
+          `Kekurangan : ${orderQty - totalStock}`
+        );
 
-    
-  }
+        return;
+      }
 
-  // 2. Kurangi stok inventory
-  const newQty = inv.quantity - allocQty;
+      // ==========================================
+      // SISA QTY YANG HARUS DIALOKASIKAN
+      // ==========================================
+      let remaining = orderQty;
 
-  const { error: updateInventoryError } = await supabase
-    .from("inventory")
-    .update({
-      quantity: newQty,
-    })
-    .eq("id", inv.id);
+      // ==========================================
+      // ALOKASI BERDASARKAN LOCATION
+      // ==========================================
+      for (const inv of inventories) {
+        if (remaining <= 0) {
+          break;
+        }
 
-  if (updateInventoryError) {
-    alert(updateInventoryError.message);
-    return;
-  }
+        const availableQty =
+          Number(inv.quantity || 0);
 
-  // 3. Kurangi sisa order yang belum dialokasikan
-  remaining -= allocQty;
-}
+        if (availableQty <= 0) {
+          continue;
+        }
 
+        // Ambil quantity sesuai kebutuhan order
+        const allocQty = Math.min(
+          availableQty,
+          remaining
+        );
 
-      // Update order_detail
+        // ========================================
+        // SIMPAN ALLOCATION
+        // ========================================
+        const { error: allocationError } =
+          await supabase
+            .from("allocation")
+            .insert({
+              order_no: item.order_no,
+              sku: sku,
+              deskripsi:
+                item.deskripsi ||
+                inv.deskripsi ||
+                "",
+              location: inv.location,
+              qty_allocated: allocQty,
+              qty_picked: 0,
+            });
+
+        if (allocationError) {
+          console.error(allocationError);
+
+          alert(
+            `Gagal membuat allocation:\n${allocationError.message}`
+          );
+
+          return;
+        }
+
+        // ========================================
+        // PENTING:
+        // JANGAN UPDATE INVENTORY DI SINI
+        //
+        // inventory.quantity TETAP
+        // ========================================
+
+        remaining -= allocQty;
+      }
+
+      // ==========================================
+      // CEK HASIL ALOKASI
+      // ==========================================
+      if (remaining > 0) {
+        alert(
+          `Allocation tidak memenuhi order.\n\n` +
+          `SKU       : ${sku}\n` +
+          `Qty Order : ${orderQty}\n` +
+          `Belum terpenuhi : ${remaining}`
+        );
+
+        return;
+      }
+
+      // ==========================================
+      // UPDATE ORDER DETAIL
+      // ==========================================
       const { error: detailError } =
         await supabase
           .from("order_detail")
           .update({
-            qty_allocated: item.qty_order,
+            qty_allocated: orderQty,
           })
           .eq("id", item.id);
 
       if (detailError) {
         console.error(detailError);
+
+        alert(
+          `Gagal update order detail:\n${detailError.message}`
+        );
+
+        return;
       }
     }
 
-    // Update status order
+    // ==========================================
+    // UPDATE STATUS ORDER
+    // ==========================================
     const { error: headerError } =
       await supabase
         .from("order_header")
@@ -137,19 +231,37 @@ for (const inv of inventories) {
 
     if (headerError) {
       console.error(headerError);
-      alert(headerError.message);
+
+      alert(
+        `Gagal update status order:\n${headerError.message}`
+      );
+
       return;
     }
 
-    alert("Allocation Success");
+    alert(
+      "Allocation Success!\n\n" +
+      "Allocation berhasil dibuat.\n" +
+      "Inventory belum dikurangi."
+    );
 
-    loadData();
+    await loadData();
 
   } catch (err) {
-    console.error(err);
+    console.error(
+      "Allocation Failed:",
+      err
+    );
+
     alert("Allocation Failed");
+
+  } finally {
+    setAllocating(false);
   }
 }
+
+
+
 
   const totalQty = details.reduce(
     (sum, item) => sum + (item.qty_order || 0),

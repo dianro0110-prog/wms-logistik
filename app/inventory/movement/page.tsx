@@ -1,275 +1,792 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabase";
-import { ArrowLeftCircle } from "lucide-react";
+import { ArrowLeftCircle, ArrowRightLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-type Movement = {
+type InventoryRow = {
   id: number;
   sku: string;
-  deskripsi: string;
+  location: string;
+  
+  quantity: number;
+};
+
+type MovementRow = {
+  id: number;
+  sku: string;
   location_from: string;
   location_to: string;
   quantity: number;
   created_at: string;
 };
 
-type Product = {
-  sku: string;
-  deskripsi: string;
-};
-
 export default function MovementPage() {
   const router = useRouter();
 
-  const [movements, setMovements] = useState<Movement[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
+  // =====================================================
+  // FORM STATE
+  // =====================================================
 
   const [sku, setSku] = useState("");
-  const [deskripsi, setDeskripsi] = useState("");
-  const [locationFrom, setLocationFrom] = useState("");
-  const [locationTo, setLocationTo] = useState("");
-  const [qty, setQty] = useState<number>(0);
+  const [locationFrom, setLocationFrom] =
+    useState("");
+  const [locationTo, setLocationTo] =
+    useState("");
+  const [quantity, setQuantity] =
+    useState<number>(0);
 
-  // ================= LOAD PRODUCTS =================
-  async function loadProducts() {
-    const { data, error } = await supabase
-      .from("product")
-      .select("sku, deskripsi");
+  const [loading, setLoading] =
+    useState(false);
 
-    if (error) return console.error(error);
+  // =====================================================
+  // INVENTORY
+  // =====================================================
 
-    setProducts(data || []);
+  const [inventory, setInventory] =
+    useState<InventoryRow[]>([]);
+
+  // =====================================================
+  // MOVEMENT HISTORY
+  // =====================================================
+
+  const [movement, setMovement] =
+    useState<MovementRow[]>([]);
+
+  // =====================================================
+  // LOAD INVENTORY
+  // =====================================================
+
+  async function loadInventory() {
+    const {
+      data,
+      error,
+    } = await supabase
+      .from("inventory")
+      .select(
+        "id, sku, location, quantity"
+      )
+      .gt("quantity", 0)
+      .order("location", {
+        ascending: true,
+      });
+
+    if (error) {
+      console.error(
+        "Inventory error:",
+        error
+      );
+
+      alert(error.message);
+
+      return;
+    }
+
+    setInventory(data || []);
   }
 
-  // ================= LOAD MOVEMENTS =================
-  async function loadMovements() {
-    const { data, error } = await supabase
-      .from("movements")
-      .select("*")
-      .order("id", { ascending: false });
+  // =====================================================
+  // LOAD MOVEMENT HISTORY
+  // =====================================================
 
-    if (error) return console.error(error);
+  async function loadMovement() {
+    const {
+      data,
+      error,
+    } = await supabase
+      .from("movement")
+      .select(
+        "id, sku,  location_from, location_to, quantity, created_at"
+      )
+      .order("created_at", {
+        ascending: false,
+      });
 
-    setMovements(data || []);
+    if (error) {
+      console.error(
+        "Movement error:",
+        error
+      );
+
+      alert(error.message);
+
+      return;
+    }
+
+    setMovement(data || []);
   }
+
+  // =====================================================
+  // INITIAL LOAD
+  // =====================================================
 
   useEffect(() => {
-    loadProducts();
-    loadMovements();
+    loadInventory();
+    loadMovement();
   }, []);
 
-  // ================= ADD MOVEMENT =================
-  function addMovement() {
-    if (!sku.trim()) return alert("SKU wajib diisi");
-    if (!locationFrom.trim()) return alert("Location From wajib diisi");
-    if (!locationTo.trim()) return alert("Location To wajib diisi");
-    if (qty <= 0) return alert("Qty harus > 0");
+  // =====================================================
+  // GET INVENTORY FROM LOCATION
+  // =====================================================
 
-    const cleanSku = sku.toLowerCase().trim();
-
-    const product = products.find(
-      (p) => p.sku?.toLowerCase().trim() === cleanSku
+  const selectedInventory =
+    inventory.find(
+      (item) =>
+        item.sku.trim().toLowerCase() ===
+          sku.trim().toLowerCase() &&
+        item.location.trim().toLowerCase() ===
+          locationFrom.trim().toLowerCase()
     );
 
-    if (!product) return alert("SKU tidak ditemukan di master product");
+  const availableQty =
+    selectedInventory
+      ? Number(
+          selectedInventory.quantity || 0
+        )
+      : 0;
 
-    const newMovement = {
-      sku: cleanSku,
-      deskripsi: product.deskripsi,
-      location_from: locationFrom,
-      location_to: locationTo,
-      quantity: qty,
-    };
+  // =====================================================
+  // PROCESS MOVEMENT
+  // =====================================================
 
-    setMovements((prev) => [newMovement as Movement, ...prev]);
+  async function processMovement() {
+    // ================================================
+    // VALIDASI SKU
+    // ================================================
 
-    setSku("");
-    setDeskripsi("");
-    setLocationFrom("");
-    setLocationTo("");
-    setQty(0);
-  }
+    if (!sku.trim()) {
+      alert("SKU wajib diisi.");
+      return;
+    }
 
-  // ================= SAVE TO DATABASE =================
-  async function submit() {
-  if (movements.length === 0) return alert("Tidak ada data movement");
+    // ================================================
+    // VALIDASI LOCATION FROM
+    // ================================================
 
-  // 1. simpan movement
-  const { error: insertError } = await supabase.from("movements").insert(
-    movements.map((m) => ({
-      sku: m.sku,
-      deskripsi: m.deskripsi,
-      location_from: m.location_from,
-      location_to: m.location_to,
-      quantity: m.quantity,
-    }))
-  );
+    if (!locationFrom.trim()) {
+      alert(
+        "Lokasi awal wajib diisi."
+      );
 
-  if (insertError) {
-    console.error(insertError);
-    return alert(insertError.message);
-  }
+      return;
+    }
 
-  // 2. update stok satu per satu
-  for (const m of movements) {
-    const qty = Number(m.quantity);
+    // ================================================
+    // VALIDASI LOCATION TO
+    // ================================================
 
-    // 🔻 ambil stok asal
-    const { data: fromData } = await supabase
-      .from("putaway_details")
-      .select("quantity")
-      .eq("sku", m.sku)
-      .eq("location", m.location_from)
-      .single();
+    if (!locationTo.trim()) {
+      alert(
+        "Lokasi tujuan wajib diisi."
+      );
 
-    const fromQty = fromData?.quantity || 0;
+      return;
+    }
 
-    await supabase
-      .from("putaway_details")
-      .update({
-        quantity: fromQty - qty,
-      })
-      .eq("sku", m.sku)
-      .eq("location", m.location_from);
+    // ================================================
+    // LOCATION TIDAK BOLEH SAMA
+    // ================================================
 
-    // 🔺 ambil stok tujuan
-    const { data: toData } = await supabase
-      .from("putaway_details")
-      .select("quantity")
-      .eq("sku", m.sku)
-      .eq("location", m.location_to)
-      .maybeSingle();
+    if (
+      locationFrom.trim().toLowerCase() ===
+      locationTo.trim().toLowerCase()
+    ) {
+      alert(
+        "Lokasi awal dan lokasi tujuan tidak boleh sama."
+      );
 
-    if (toData) {
-      await supabase
-        .from("putaway_details")
-        .update({
-          quantity: toData.quantity + qty,
-        })
-        .eq("sku", m.sku)
-        .eq("location", m.location_to);
-    } else {
-      await supabase.from("putaway_details").insert({
-        sku: m.sku,
-        deskripsi: m.deskripsi,
-        location: m.location_to,
-        quantity: qty,
-        receiving_no: "MOVE",
-      });
+      return;
+    }
+
+    // ================================================
+    // VALIDASI QUANTITY
+    // ================================================
+
+    if (
+      !quantity ||
+      quantity <= 0
+    ) {
+      alert(
+        "Quantity harus lebih besar dari 0."
+      );
+
+      return;
+    }
+
+    // ================================================
+    // CEK INVENTORY
+    // ================================================
+
+    if (!selectedInventory) {
+      alert(
+        `SKU ${sku} tidak ditemukan di lokasi ${locationFrom}.`
+      );
+
+      return;
+    }
+
+    // ================================================
+    // CEK STOK
+    // ================================================
+
+    if (
+      quantity > availableQty
+    ) {
+      alert(
+        `Stok tidak mencukupi.\n\n` +
+        `SKU       : ${sku}\n` +
+        `Location  : ${locationFrom}\n` +
+        `Stok      : ${availableQty}\n` +
+        `Movement  : ${quantity}`
+      );
+
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // ================================================
+      // PANGGIL SUPABASE RPC
+      // ================================================
+
+      const {
+        data,
+        error,
+      } = await supabase.rpc(
+        "process_stock_movement",
+        {
+          p_sku: sku.trim(),
+          p_location_from:
+            locationFrom.trim(),
+          p_location_to:
+            locationTo.trim(),
+          p_quantity:
+            Number(quantity),
+        }
+      );
+
+      if (error) {
+        console.error(
+          "Movement RPC error:",
+          error
+        );
+
+        alert(
+          `Movement gagal:\n${error.message}`
+        );
+
+        return;
+      }
+
+      console.log(
+        "Movement success:",
+        data
+      );
+
+      // ================================================
+      // SUCCESS
+      // ================================================
+
+      alert(
+        `Movement berhasil!\n\n` +
+        `SKU       : ${sku}\n` +
+        `Dari      : ${locationFrom}\n` +
+        `Ke        : ${locationTo}\n` +
+        `Quantity  : ${quantity}`
+      );
+
+      // ================================================
+      // RESET FORM
+      // ================================================
+
+      setSku("");
+      setLocationFrom("");
+      setLocationTo("");
+      setQuantity(0);
+
+      // ================================================
+      // RELOAD DATA
+      // ================================================
+
+      await loadInventory();
+      await loadMovement();
+
+    } catch (error) {
+      console.error(
+        "Movement error:",
+        error
+      );
+
+      alert(
+        "Terjadi kesalahan saat melakukan movement."
+      );
+    } finally {
+      setLoading(false);
     }
   }
 
-  await loadMovements();
+  // =====================================================
+  // FORMAT DATE
+  // =====================================================
 
-  alert("Movement berhasil disimpan & stok terupdate");
+  function formatDate(
+    value: string
+  ) {
+    if (!value) {
+      return "-";
+    }
 
-  setMovements([]);
-}
+    return new Date(
+      value
+    ).toLocaleString("id-ID");
+  }
+
+  // =====================================================
+  // RENDER
+  // =====================================================
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-4">
+    <div className="min-h-screen bg-slate-50 p-6">
 
-      {/* BACK */}
-      <button
-  onClick={() => router.back()}
-  className="flex items-center gap-2 bg-gray-500 text-white px-3 py-2 rounded-lg hover:bg-gray-600 transition"
->
-  <ArrowLeftCircle size={20} />
-  <span>Back</span>
-</button>
+      {/* =================================================
+          HEADER
+      ================================================= */}
 
-      <h1 className="text-2xl font-bold">Movement Stock</h1>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
 
-      {/* INPUT FORM */}
-      <div className="border p-4 space-y-2">
+        <div>
+          <div className="flex items-center gap-3">
 
-        <input
-          className="border p-2 w-full"
-          placeholder="SKU"
-          value={sku}
-          onChange={(e) => {
-            const value = e.target.value;
-            setSku(value);
+            <ArrowRightLeft
+              size={30}
+              className="text-blue-600"
+            />
 
-            const product = products.find(
-              (p) => p.sku?.toLowerCase().trim() === value.toLowerCase().trim()
-            );
+            <h1 className="text-2xl font-bold text-slate-800">
+              Stock Movement
+            </h1>
 
-            setDeskripsi(product?.deskripsi || "");
-          }}
-        />
+          </div>
 
-        <input
-          className="border p-2 w-full bg-gray-100"
-          placeholder="Deskripsi"
-          value={deskripsi}
-          readOnly
-        />
-
-        <input
-          className="border p-2 w-full"
-          placeholder="Location From"
-          value={locationFrom}
-          onChange={(e) => setLocationFrom(e.target.value)}
-        />
-
-        <input
-          className="border p-2 w-full"
-          placeholder="Location To"
-          value={locationTo}
-          onChange={(e) => setLocationTo(e.target.value)}
-        />
-
-        <input
-          className="border p-2 w-full"
-          type="number"
-          placeholder="Qty"
-          value={qty}
-          onChange={(e) => setQty(Number(e.target.value))}
-        />
+          <p className="text-gray-500 mt-1">
+            Move stock from one warehouse
+            location to another
+          </p>
+        </div>
 
         <button
-          onClick={addMovement}
-          className="bg-blue-600 text-white w-full py-2"
+          onClick={() =>
+            router.back()
+          }
+          className="flex items-center gap-2 bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition"
         >
-          + Add Movement
+          <ArrowLeftCircle
+            size={20}
+          />
+
+          Back
         </button>
+
       </div>
 
-      {/* TABLE */}
-      <table className="w-full border">
-        <thead>
-          <tr>
-            <th className="border p-2">SKU</th>
-            <th className="border p-2">Deskripsi</th>
-            <th className="border p-2">From</th>
-            <th className="border p-2">To</th>
-            <th className="border p-2">Qty</th>
-          </tr>
-        </thead>
+      {/* =================================================
+          MOVEMENT FORM
+      ================================================= */}
 
-        <tbody>
-          {movements.map((item, i) => (
-            <tr key={i}>
-              <td className="border p-2">{item.sku}</td>
-              <td className="border p-2">{item.deskripsi}</td>
-              <td className="border p-2">{item.location_from}</td>
-              <td className="border p-2">{item.location_to}</td>
-              <td className="border p-2">{item.quantity}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="bg-white rounded-xl shadow p-6 mb-6">
 
-      {/* SUBMIT */}
-      <button
-        onClick={submit}
-        className="bg-green-600 text-white w-full py-2"
-      >
-        Simpan Movement
-      </button>
+        <h2 className="text-lg font-semibold text-slate-800 mb-5">
+          Create Stock Movement
+        </h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+
+          {/* SKU */}
+
+          <div>
+
+            <label className="block text-sm font-medium text-gray-600 mb-1">
+              SKU
+            </label>
+
+            <input
+              type="text"
+              value={sku}
+              onChange={(e) =>
+                setSku(
+                  e.target.value
+                )
+              }
+              placeholder="Enter SKU"
+              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+
+          </div>
+
+          {/* LOCATION FROM */}
+
+          <div>
+
+            <label className="block text-sm font-medium text-gray-600 mb-1">
+              Location From
+            </label>
+
+            <input
+              type="text"
+              value={locationFrom}
+              onChange={(e) =>
+                setLocationFrom(
+                  e.target.value
+                )
+              }
+              placeholder="Source location"
+              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+
+          </div>
+
+          {/* LOCATION TO */}
+
+          <div>
+
+            <label className="block text-sm font-medium text-gray-600 mb-1">
+              Location To
+            </label>
+
+            <input
+              type="text"
+              value={locationTo}
+              onChange={(e) =>
+                setLocationTo(
+                  e.target.value
+                )
+              }
+              placeholder="Destination location"
+              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+
+          </div>
+
+          {/* QUANTITY */}
+
+          <div>
+
+            <label className="block text-sm font-medium text-gray-600 mb-1">
+              Quantity
+            </label>
+
+            <input
+              type="number"
+              min="1"
+              value={
+                quantity || ""
+              }
+              onChange={(e) =>
+                setQuantity(
+                  Number(
+                    e.target.value
+                  )
+                )
+              }
+              placeholder="Quantity"
+              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+
+          </div>
+
+        </div>
+
+        {/* =================================================
+            STOCK INFORMATION
+        ================================================= */}
+
+        <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+
+          <div className="bg-slate-50 rounded-lg p-4">
+
+            <div className="text-sm text-gray-500">
+              SKU
+            </div>
+
+            <div className="font-bold text-lg">
+              {sku || "-"}
+            </div>
+
+          </div>
+
+          <div className="bg-slate-50 rounded-lg p-4">
+
+            <div className="text-sm text-gray-500">
+              Current Stock
+            </div>
+
+            <div className="font-bold text-lg text-blue-600">
+              {selectedInventory
+                ? availableQty
+                : "-"}
+            </div>
+
+          </div>
+
+          <div className="bg-slate-50 rounded-lg p-4">
+
+            <div className="text-sm text-gray-500">
+              Remaining After Movement
+            </div>
+
+            <div className="font-bold text-lg text-green-600">
+              {selectedInventory
+                ? Math.max(
+                    availableQty -
+                      Number(
+                        quantity || 0
+                      ),
+                    0
+                  )
+                : "-"}
+            </div>
+
+          </div>
+
+        </div>
+
+        {/* =================================================
+            SUBMIT
+        ================================================= */}
+
+        <div className="mt-6 flex justify-end">
+
+          <button
+            onClick={
+              processMovement
+            }
+            disabled={loading}
+            className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition"
+          >
+            <ArrowRightLeft
+              size={20}
+            />
+
+            {loading
+              ? "Processing..."
+              : "Process Movement"}
+
+          </button>
+
+        </div>
+
+      </div>
+
+      {/* =================================================
+          INVENTORY
+      ================================================= */}
+
+      <div className="bg-white rounded-xl shadow mb-6">
+
+        <div className="p-5 border-b">
+
+          <h2 className="text-lg font-semibold text-slate-800">
+            Current Inventory
+          </h2>
+
+        </div>
+
+        <div className="overflow-x-auto">
+
+          <table className="w-full text-sm">
+
+            <thead className="bg-slate-200">
+
+              <tr>
+
+                <th className="border p-3 text-left">
+                  SKU
+                </th>
+
+                <th className="border p-3 text-left">
+                  Description
+                </th>
+
+                <th className="border p-3 text-left">
+                  Location
+                </th>
+
+                <th className="border p-3 text-center">
+                  Quantity
+                </th>
+
+              </tr>
+
+            </thead>
+
+            <tbody>
+
+              {inventory.length === 0 ? (
+
+                <tr>
+
+                  <td
+                    colSpan={4}
+                    className="text-center p-8 text-gray-500"
+                  >
+                    No inventory
+                  </td>
+
+                </tr>
+
+              ) : (
+
+                inventory.map(
+                  (item) => (
+
+                    <tr
+                      key={item.id}
+                      className="hover:bg-slate-50"
+                    >
+
+                      <td className="border p-3 font-semibold">
+                        {item.sku}
+                      </td>
+
+                      
+
+                      <td className="border p-3">
+                        {item.location}
+                      </td>
+
+                      <td className="border p-3 text-center font-bold text-blue-600">
+                        {item.quantity}
+                      </td>
+
+                    </tr>
+
+                  )
+                )
+
+              )}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+      {/* =================================================
+          MOVEMENT HISTORY
+      ================================================= */}
+
+      <div className="bg-white rounded-xl shadow">
+
+        <div className="p-5 border-b">
+
+          <h2 className="text-lg font-semibold text-slate-800">
+            Movement History
+          </h2>
+
+        </div>
+
+        <div className="overflow-x-auto">
+
+          <table className="w-full text-sm">
+
+            <thead className="bg-slate-200">
+
+              <tr>
+
+                <th className="border p-3 text-left">
+                  Date
+                </th>
+
+                <th className="border p-3 text-left">
+                  SKU
+                </th>
+
+                <th className="border p-3 text-left">
+                  Location From
+                </th>
+
+                <th className="border p-3 text-left">
+                  Location To
+                </th>
+
+                <th className="border p-3 text-center">
+                  Quantity
+                </th>
+
+              </tr>
+
+            </thead>
+
+            <tbody>
+
+              {movement.length === 0 ? (
+
+                <tr>
+
+                  <td
+                    colSpan={5}
+                    className="text-center p-8 text-gray-500"
+                  >
+                    Belum ada movement
+                  </td>
+
+                </tr>
+
+              ) : (
+
+                movement.map(
+                  (movement) => (
+
+                    <tr
+                      key={
+                        movement.id
+                      }
+                      className="hover:bg-slate-50"
+                    >
+
+                      <td className="border p-3 whitespace-nowrap">
+                        {formatDate(
+                          movement.created_at
+                        )}
+                      </td>
+
+                      <td className="border p-3 font-semibold">
+                        {movement.sku}
+                      </td>
+
+                      <td className="border p-3">
+                        {movement.location_from}
+                      </td>
+
+                      <td className="border p-3">
+                        {movement.location_to}
+                      </td>
+
+                      <td className="border p-3 text-center font-bold text-blue-600">
+                        {movement.quantity}
+                      </td>
+
+                    </tr>
+
+                  )
+                )
+
+              )}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
     </div>
   );
 }
+
