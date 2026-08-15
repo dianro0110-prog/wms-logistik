@@ -158,14 +158,14 @@ export default function Dashboard() {
             <h1 className="text-3xl font-bold">
               
             </h1>
-            <p className="text-slate-500">
+            <p className="text-black">
               Receiving, Inbound, Outbound & Delivery Activity
             </p>
           </div>
 
           {/* KPI */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard title="Receiving" value={totalReceiving} />
+            <StatCard title="Rece" value={totalReceiving} />
             <StatCard title="Checking" value={totalChecking} />
             <StatCard title="Putaway" value={totalPutaway} />
             <StatCard title="Products" value={totalProduct} />

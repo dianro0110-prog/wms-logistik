@@ -29,7 +29,8 @@ export default function PutawayPage() {
   const { data, error } = await supabase
     .from("receivings")
     .select("receiving_no")
-    .in("status", ["Checking", "Checking Complete", "Putaway"]);
+    .in("status", ["Checking", "Checking Complete", "Checking Process", "Putaway"])
+    .neq("status", "Completed");
 
   if (error) {
     console.error(error);
@@ -238,15 +239,29 @@ export default function PutawayPage() {
       })
       .eq("receiving_no", selectedReceivingNo);
 
-    alert("Putaway & Inventory berhasil");
+    alert(
+  totalPut >= totalCheck
+    ? "Putaway selesai. Semua hasil checking sudah dipindahkan."
+    : "Putaway berhasil."
+);
 
-    setSku("");
-    setQuantity(0);
-    setLocation("");
-    setDeskripsi("");
+setSku("");
+setQuantity(0);
+setLocation("");
+setDeskripsi("");
 
-    loadPutaway();
-    loadChecking(selectedReceivingNo);
+await loadPutaway();
+
+if (totalPut >= totalCheck) {
+  // Semua hasil checking sudah selesai di-putaway
+  setCheckingData([]);
+  setSelectedReceivingNo("");
+} else {
+  // Masih ada sisa qty yang harus di-putaway
+  await loadChecking(selectedReceivingNo);
+}
+
+await loadReceivingList();
   }
 
   // ================= AUTO DESKRIPSI =================
@@ -287,29 +302,6 @@ export default function PutawayPage() {
           </option>
         ))}
       </select>
-
-      {/* CHECKING */}
-      {checkingData.length > 0 && (
-        <div className="border p-3 rounded bg-white">
-          <h3 className="font-bold mb-2">Checking Data</h3>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="border p-2">SKU</th>
-                <th className="border p-2">Quantity</th>
-              </tr>
-            </thead>
-            <tbody>
-              {checkingData.map((c, i) => (
-                <tr key={i}>
-                  <td className="border p-2">{c.sku}</td>
-                  <td className="border p-2">{c.quantity}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
 
       {/* INPUT SKU */}
       <input

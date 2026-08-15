@@ -365,7 +365,7 @@ if (isMobileApp === null) {
         color: "#ffffff",
       }}
     >
-      Management Warehouse Activity
+      Monitoring Warehouse Activity
     </h1>
 
     <p

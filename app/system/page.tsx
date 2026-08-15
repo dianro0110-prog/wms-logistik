@@ -107,9 +107,9 @@ export default function SystemPage() {
                 className="text-4xl md:text-5xl lg:text-6xl
                 font-bold tracking-tight text-white leading-tight"
               >
-                Warehouse
+                Let's Growt 🚀
                 <span className="block text-blue-300">
-                  Management System
+                  make your work easy and fun
                 </span>
               </h1>
 
@@ -130,7 +130,7 @@ export default function SystemPage() {
               {/* Receiving */}
               <div
                 className="group p-5 rounded-2xl
-                bg-white/10 border border-white/15
+                bg-blue-950 border border-white/15
                 backdrop-blur-md
                 hover:bg-white/15
                 hover:-translate-y-1
@@ -153,7 +153,7 @@ export default function SystemPage() {
                       Inbound
                     </p>
 
-                    <p className="text-white/50 text-xs">
+                    <p className="text-white text-xs">
                       Receiving, Checking, & Putaway
                     </p>
                   </div>
@@ -163,7 +163,7 @@ export default function SystemPage() {
               {/* Checking */}
               <div
                 className="group p-5 rounded-2xl
-                bg-white/10 border border-white/15
+                bg-green-950 border border-white/15
                 backdrop-blur-md
                 hover:bg-white/15
                 hover:-translate-y-1
@@ -186,7 +186,7 @@ export default function SystemPage() {
                       Inventory
                     </p>
 
-                    <p className="text-white/50 text-xs">
+                    <p className="text-white text-xs">
                       Inventory List & Movement
                     </p>
                   </div>
@@ -196,9 +196,9 @@ export default function SystemPage() {
               {/* Picking */}
               <div
                 className="group p-5 rounded-2xl
-                bg-white/10 border border-white/15
+                bg-red-950 border border-green-900
                 backdrop-blur-md
-                hover:bg-white/15
+                hover:bg-green-600
                 hover:-translate-y-1
                 transition-all duration-300"
               >

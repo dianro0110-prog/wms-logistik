@@ -125,9 +125,12 @@ RCV001;Supplier A;Open;SKU002;Contoh Barang; 2`;
   }
 
   // ================= PROCESS DATA =================
-  async function processData(data: any[]) {
+  // ================= PROCESS DATA =================
+async function processData(data: any[]) {
+  try {
     const grouped: Record<string, any> = {};
 
+    // Bersihkan dan validasi data upload
     data.forEach((row) => {
       const cleanRow: any = {};
 
@@ -136,22 +139,63 @@ RCV001;Supplier A;Open;SKU002;Contoh Barang; 2`;
           .replace(/\uFEFF/g, "")
           .trim()
           .toLowerCase();
+
         cleanRow[key] = v;
       });
 
-      const receiving_no = String(cleanRow.receiving_no || "").trim();
-      const supplier_name = String(cleanRow.supplier_name || "").trim();
-      const status = String(cleanRow.status || "Open").trim();
+      const receiving_no = String(
+        cleanRow.receiving_no || ""
+      ).trim();
 
-      const sku = String(cleanRow.sku || "").trim();
-      const deskripsi = String(cleanRow.deskripsi || "").trim();
-      const quantity = Number(cleanRow.quantity || 0);
+      const supplier_name = String(
+        cleanRow.supplier_name || ""
+      ).trim();
 
-      if (!receiving_no || !sku) return;
+      const status = String(
+        cleanRow.status || "Open"
+      ).trim();
 
+      const sku = String(
+        cleanRow.sku || ""
+      ).trim();
+
+      const deskripsi = String(
+        cleanRow.deskripsi || ""
+      ).trim();
+
+      const quantity = Number(
+        cleanRow.quantity || 0
+      );
+
+      // Abaikan baris kosong
+      if (!receiving_no && !sku) {
+        return;
+      }
+
+      // Validasi
+      if (!receiving_no) {
+        console.warn("Receiving No kosong:", cleanRow);
+        return;
+      }
+
+      if (!sku) {
+        console.warn("SKU kosong:", cleanRow);
+        return;
+      }
+
+      if (!quantity || quantity <= 0) {
+        console.warn("Quantity tidak valid:", cleanRow);
+        return;
+      }
+
+      // Group berdasarkan receiving_no
       if (!grouped[receiving_no]) {
         grouped[receiving_no] = {
-          header: { receiving_no, supplier_name, status },
+          header: {
+            receiving_no,
+            supplier_name,
+            status,
+          },
           items: [],
         };
       }
@@ -163,20 +207,49 @@ RCV001;Supplier A;Open;SKU002;Contoh Barang; 2`;
       });
     });
 
-    for (const key of Object.keys(grouped)) {
+    const receivingNos = Object.keys(grouped);
+
+    // Tidak ada data valid
+    if (receivingNos.length === 0) {
+      alert(
+        "Upload gagal: tidak ada data valid yang ditemukan.\n\n" +
+        "Pastikan kolom CSV adalah:\n" +
+        "receiving_no; supplier_name; status; sku; deskripsi; quantity"
+      );
+      return;
+    }
+
+    let successCount = 0;
+    let detailCount = 0;
+    let failedCount = 0;
+
+    // ================= INSERT DATABASE =================
+    for (const key of receivingNos) {
       const g = grouped[key];
 
-      const { data: header, error } = await supabase
+      // Insert header
+      const { data: header, error: headerError } = await supabase
         .from("receivings")
         .insert(g.header)
         .select()
         .single();
 
-      if (error) {
-        alert(error.message);
+      if (headerError || !header) {
+        console.error(
+          "Error insert receiving:",
+          headerError
+        );
+
+        failedCount++;
+
+        alert(
+          `Gagal menyimpan Receiving ${g.header.receiving_no}:\n${headerError?.message || "Unknown error"}`
+        );
+
         continue;
       }
 
+      // Buat detail
       const details = g.items.map((i: any) => ({
         receiving_id: header.id,
         sku: i.sku,
@@ -184,51 +257,221 @@ RCV001;Supplier A;Open;SKU002;Contoh Barang; 2`;
         quantity: i.quantity,
       }));
 
-      await supabase.from("receiving_details").insert(details);
+      // Insert detail
+      const { error: detailError } = await supabase
+        .from("receiving_details")
+        .insert(details);
+
+      if (detailError) {
+        console.error(
+          "Error insert receiving_details:",
+          detailError
+        );
+
+        failedCount++;
+
+        alert(
+          `Header ${g.header.receiving_no} berhasil dibuat, tetapi detail gagal disimpan:\n${detailError.message}`
+        );
+
+        // Hapus header agar tidak meninggalkan data setengah jadi
+        await supabase
+          .from("receivings")
+          .delete()
+          .eq("id", header.id);
+
+        continue;
+      }
+
+      successCount++;
+      detailCount += details.length;
     }
 
+    // Refresh list
     await loadReceiving();
-    alert("Upload sukses");
-    alert("Upload sukses");
+
+    // ================= RESULT =================
+    if (successCount > 0 && failedCount === 0) {
+      alert(
+        `Upload berhasil!\n\n` +
+        `Receiving: ${successCount}\n` +
+        `SKU/Detail: ${detailCount}`
+      );
+    } else if (successCount > 0 && failedCount > 0) {
+      alert(
+        `Upload selesai sebagian.\n\n` +
+        `Berhasil: ${successCount}\n` +
+        `Gagal: ${failedCount}\n` +
+        `Detail berhasil: ${detailCount}`
+      );
+    } else {
+      alert(
+        "Upload gagal. Tidak ada data yang berhasil disimpan."
+      );
+    }
+
+  } catch (error: any) {
+    console.error("PROCESS DATA ERROR:", error);
+
+    alert(
+      `Terjadi error saat upload:\n${error?.message || error}`
+    );
   }
+}
 
   // ================= UPLOAD =================
-  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // ================= UPLOAD =================
+async function handleUpload(
+  e: React.ChangeEvent<HTMLInputElement>
+) {
+  const file = e.target.files?.[0];
 
-    const name = file.name.toLowerCase();
+  if (!file) return;
 
+  const name = file.name.toLowerCase();
+
+  try {
+    // ================= CSV =================
     if (name.endsWith(".csv")) {
       Papa.parse(file, {
         header: true,
         skipEmptyLines: true,
+
+        // PENTING:
+        // Template menggunakan ;
+        delimiter: ";",
+
         transformHeader: (h) =>
-          h.replace(/\uFEFF/g, "").trim().toLowerCase(),
+          h
+            .replace(/\uFEFF/g, "")
+            .trim()
+            .toLowerCase(),
+
         complete: async (res) => {
+          console.log("CSV hasil parsing:", res.data);
+
+          if (res.errors && res.errors.length > 0) {
+            console.error(
+              "CSV parsing errors:",
+              res.errors
+            );
+
+            alert(
+              "File CSV tidak dapat dibaca dengan benar."
+            );
+
+            return;
+          }
+
+          if (!res.data || res.data.length === 0) {
+            alert("File CSV kosong.");
+            return;
+          }
+
           await processData(res.data as any[]);
         },
+
+        error: (error) => {
+          console.error("CSV ERROR:", error);
+
+          alert(
+            `Gagal membaca CSV:\n${error.message}`
+          );
+        },
       });
+
       return;
     }
 
-    const reader = new FileReader();
+    // ================= XLS / XLSX =================
+    if (
+      name.endsWith(".xls") ||
+      name.endsWith(".xlsx")
+    ) {
+      const reader = new FileReader();
 
-    reader.onload = async (e) => {
-      const data = new Uint8Array(e.target?.result as ArrayBuffer);
+      reader.onload = async (event) => {
+        try {
+          const result = event.target?.result;
 
-      const wb = XLSX.read(data, { type: "array" });
-      const sheet = wb.Sheets[wb.SheetNames[0]];
+          if (!result) {
+            alert("File Excel tidak dapat dibaca.");
+            return;
+          }
 
-      const json = XLSX.utils.sheet_to_json(sheet, {
-        defval: "",
-      });
+          const data = new Uint8Array(
+            result as ArrayBuffer
+          );
 
-      await processData(json as any[]);
-    };
+          const wb = XLSX.read(data, {
+            type: "array",
+          });
 
-    reader.readAsArrayBuffer(file);
+          if (!wb.SheetNames.length) {
+            alert("File Excel tidak memiliki sheet.");
+            return;
+          }
+
+          const sheet =
+            wb.Sheets[wb.SheetNames[0]];
+
+          const json = XLSX.utils.sheet_to_json(
+            sheet,
+            {
+              defval: "",
+            }
+          );
+
+          console.log(
+            "Excel hasil parsing:",
+            json
+          );
+
+          if (!json || json.length === 0) {
+            alert("File Excel kosong.");
+            return;
+          }
+
+          await processData(json as any[]);
+        } catch (error: any) {
+          console.error(
+            "EXCEL ERROR:",
+            error
+          );
+
+          alert(
+            `Gagal membaca Excel:\n${error?.message || error}`
+          );
+        }
+      };
+
+      reader.onerror = () => {
+        alert("Gagal membaca file Excel.");
+      };
+
+      reader.readAsArrayBuffer(file);
+
+      return;
+    }
+
+    alert(
+      "Format file tidak didukung. Gunakan CSV, XLS, atau XLSX."
+    );
+
+  } catch (error: any) {
+    console.error(
+      "UPLOAD ERROR:",
+      error
+    );
+
+    alert(
+      `Upload gagal:\n${error?.message || error}`
+    );
+  } finally {
+    // Supaya file yang sama bisa di-upload ulang
+    e.target.value = "";
   }
+}
 
   // ================= SUBMIT =================
   async function submit() {
