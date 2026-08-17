@@ -351,145 +351,224 @@ if (isMobileApp === null) {
         PANEL KIRI
   ========================= */}
 
-  <div
+
+<div
+  style={{
+    padding: "28px 32px",
+    background: "#03163fe3",
+  }}
+>
+  {/* TITLE */}
+  <h1
     style={{
-      padding: "40px",
-      background: "#03163fe3",
+      fontSize: "32px",
+      fontWeight: "700",
+      lineHeight: "40px",
+      color: "#ffffff",
+      margin: 0,
     }}
   >
-    <h1
-      style={{
-        fontSize: "38px",
-        fontWeight: "700",
-        lineHeight: "50px",
-        color: "#ffffff",
-      }}
-    >
-      Monitoring Warehouse Activity
-    </h1>
+    Monitoring Warehouse Activity
+  </h1>
 
-    <p
-      style={{
-        marginTop: "18px",
-        color: "#ffffff",
-        fontSize: "17px",
-      }}
-    >
-      Optimalkan operasi harian anda dengan tracking real-time,
-      kontrol akses multi-user dan reporting lengkap.
-    </p>
+  {/* DESCRIPTION */}
+  <p
+    style={{
+      marginTop: "12px",
+      color: "#ffffff",
+      fontSize: "15px",
+      lineHeight: "22px",
+      marginBottom: 0,
+    }}
+  >
+    Optimalkan operasi harian anda dengan tracking real-time,
+    kontrol akses multi-user dan reporting lengkap.
+  </p>
 
+  {/* FEATURE CARDS */}
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+      gap: "12px",
+      marginTop: "22px",
+    }}
+  >
+    {/* Real-time */}
     <div
       style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr",
-        gap: "18px",
-        marginTop: "35px",
-      }}
-    >
-      <div
-        style={{
-          background: "#ccdaf1",
-          padding: "20px",
-          borderRadius: "12px",
-        }}
-      >
-        <Package color="#000" />
-
-        <h3>Real-time Tracking</h3>
-
-        <p style={{ color: "#666" }}>
-          Monitor stok secara live
-        </p>
-      </div>
-
-      <div
-        style={{
-          background: "#ccdaf1",
-          padding: "20px",
-          borderRadius: "12px",
-        }}
-      >
-        <Shield color="#000" />
-
-        <h3>Multi-user Access</h3>
-
-        <p style={{ color: "#666" }}>
-          Role-based permissions
-        </p>
-      </div>
-
-      <div
-        style={{
-          background: "#ccdaf1",
-          padding: "20px",
-          borderRadius: "12px",
-        }}
-      >
-        <Users color="#000" />
-
-        <h3>500+ Clients</h3>
-
-        <p style={{ color: "#666" }}>
-          Perusahaan terpercaya
-        </p>
-      </div>
-
-      <div
-        style={{
-          background: "#ccdaf1",
-          padding: "20px",
-          borderRadius: "12px",
-        }}
-      >
-        <Smartphone color="#000" />
-
-        <h3>Mobile Ready</h3>
-
-        <p style={{ color: "#666" }}>
-          Akses via smartphone
-        </p>
-      </div>
-    </div>
-
-    <div
-      style={{
-        marginTop: "40px",
         background: "#ccdaf1",
-        padding: "20px",
-        borderRadius: "12px",
+        padding: "14px",
+        borderRadius: "10px",
       }}
     >
-      <h3>Cara Login</h3>
+      <Package size={22} color="#000" />
 
-      <ul
+      <h3
         style={{
-          paddingLeft: "20px",
-          lineHeight: "35px",
-          color: "#555",
+          margin: "8px 0 3px",
+          fontSize: "15px",
+          fontWeight: "700",
         }}
       >
-        <li>Masukkan Username</li>
-        <li>Masukkan Password</li>
-        <li>Klik Masuk ke Wms</li>
-      </ul>
+        Real-time Tracking
+      </h3>
+
+      <p
+        style={{
+          margin: 0,
+          color: "#666",
+          fontSize: "12px",
+        }}
+      >
+        Monitor stok secara live
+      </p>
     </div>
 
+    {/* Multi-user */}
     <div
       style={{
-        marginTop: "35px",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        color: "#fff",
-        opacity: 0.8,
-        fontSize: "14px",
+        background: "#ccdaf1",
+        padding: "14px",
+        borderRadius: "10px",
       }}
     >
-      <span>Warehouse Management System</span>
-      <span>Version 1.0</span>
+      <Shield size={22} color="#000" />
+
+      <h3
+        style={{
+          margin: "8px 0 3px",
+          fontSize: "15px",
+          fontWeight: "700",
+        }}
+      >
+        Multi-user Access
+      </h3>
+
+      <p
+        style={{
+          margin: 0,
+          color: "#666",
+          fontSize: "12px",
+        }}
+      >
+        Role-based permissions
+      </p>
+    </div>
+
+    {/* Clients */}
+    <div
+      style={{
+        background: "#ccdaf1",
+        padding: "14px",
+        borderRadius: "10px",
+      }}
+    >
+      <Users size={22} color="#000" />
+
+      <h3
+        style={{
+          margin: "8px 0 3px",
+          fontSize: "15px",
+          fontWeight: "700",
+        }}
+      >
+        500+ Clients
+      </h3>
+
+      <p
+        style={{
+          margin: 0,
+          color: "#666",
+          fontSize: "12px",
+        }}
+      >
+        Perusahaan terpercaya
+      </p>
+    </div>
+
+    {/* Mobile */}
+    <div
+      style={{
+        background: "#ccdaf1",
+        padding: "14px",
+        borderRadius: "10px",
+      }}
+    >
+      <Smartphone size={22} color="#000" />
+
+      <h3
+        style={{
+          margin: "8px 0 3px",
+          fontSize: "15px",
+          fontWeight: "700",
+        }}
+      >
+        Mobile Ready
+      </h3>
+
+      <p
+        style={{
+          margin: 0,
+          color: "#666",
+          fontSize: "12px",
+        }}
+      >
+        Akses via smartphone
+      </p>
     </div>
   </div>
+
+  {/* CARA LOGIN */}
+  <div
+    style={{
+      marginTop: "20px",
+      background: "#ccdaf1",
+      padding: "14px 18px",
+      borderRadius: "10px",
+    }}
+  >
+    <h3
+      style={{
+        margin: 0,
+        fontSize: "16px",
+        fontWeight: "700",
+      }}
+    >
+      Cara Login
+    </h3>
+
+    <ul
+      style={{
+        paddingLeft: "18px",
+        margin: "7px 0 0",
+        lineHeight: "24px",
+        color: "#555",
+        fontSize: "13px",
+      }}
+    >
+      <li>Masukkan Username</li>
+      <li>Masukkan Password</li>
+      <li>Klik Masuk ke Wms</li>
+    </ul>
+  </div>
+
+  {/* FOOTER */}
+  <div
+    style={{
+      marginTop: "18px",
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
+      color: "#fff",
+      opacity: 0.75,
+      fontSize: "12px",
+    }}
+  >
+    <span>Warehouse Management System</span>
+    <span>Version 1.0</span>
+  </div>
+</div>
 
   {/* =========================
         PANEL KANAN

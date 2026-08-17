@@ -23,6 +23,7 @@ export default function PutawayPage() {
 
   const clean = (v: any) =>
     (v ?? "").toString().trim().toLowerCase();
+  const [checkedBy, setCheckedBy] = useState("");
 
   // ================= RECEIVING =================
  async function loadReceivingList() {
@@ -50,6 +51,30 @@ export default function PutawayPage() {
     setCheckingData(data || []);
   }
 
+// ================= putaway_by   =================
+async function loadPutawayBy() {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error) {
+    console.error("Gagal mengambil user login:", error);
+    return;
+  }
+
+  if (user) {
+    const username =
+      user.user_metadata?.username ||
+      user.user_metadata?.name ||
+      user.email ||
+      "";
+
+    setCheckedBy(username);
+  }
+}
+
+
   // ================= PUTAWAY =================
   async function loadPutaway() {
     const { data } = await supabase
@@ -72,6 +97,7 @@ export default function PutawayPage() {
     loadReceivingList();
     loadPutaway();
     loadProducts();
+    loadPutawayBy();
   }, []);
 
   useEffect(() => {

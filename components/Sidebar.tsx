@@ -231,7 +231,7 @@ const handleLogout = async () => {
     </Link>
 
     <Link
-      href="/inbound/putaway"
+      href="/inbound/putaway-report"
       className="block px-3 py-2 hover:bg-slate-800 rounded"
     >
       Putaway Report

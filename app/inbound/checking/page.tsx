@@ -15,9 +15,9 @@ type Receiving = {
 type ReceivingDetail = {
   id: number;
   receiving_id: number;
-  receiving_no: string;
   sku: string;
   quantity: number;
+  deskripsi?: string;
 };
 
 type CheckingRow = {
@@ -45,63 +45,107 @@ export default function CheckingPage() {
 
   const [products, setProducts] = useState<any[]>([]);
   const [deskripsi, setDeskripsi] = useState("");
+  const [checkedBy, setCheckedBy] = useState("");
 
   // ================= LOAD RECEIVINGS =================
   async function loadReceivings() {
-    const { data, error } = await supabase
+  const { data, error } = await supabase
+    .from("receivings")
+    .select(`
+      id,
+      receiving_no,
+      supplier_name,
+      status
+    `)
+    .order("id", { ascending: false });
+
+  if (error) {
+    console.error("LOAD RECEIVINGS ERROR:", error);
+    return;
+  }
+
+  console.log("SEMUA RECEIVING:", data);
+
+  // Ambil receiving yang sudah Checking Complete
+  const { data: checkedReceiving, error: checkingError } =
+    await supabase
       .from("receivings")
-      .select("id, receiving_no, supplier_name")
-      .neq("status", "Checking Complete")
-      .order("id", { ascending: false });
+      .select("id")
+      .eq("status", "Checking Complete");
 
-    if (error) {
-      console.error(error);
-      return;
-    }
-
-    setReceivings(data ?? []);
+  if (checkingError) {
+    console.error(
+      "LOAD CHECKING COMPLETE ERROR:",
+      checkingError
+    );
+    return;
   }
 
+  const completedIds = new Set(
+    (checkedReceiving || []).map((r) => r.id)
+  );
+
+  // Hanya tampilkan receiving yang belum selesai checking
+  const available = (data || []).filter(
+    (r) => !completedIds.has(r.id)
+  );
+
+  console.log("RECEIVING BELUM CHECKING:", available);
+
+  setReceivings(available);
+}
+
+
+
+// ================= LOAD PRODUCTS =================
+async function loadProducts() {
+  const { data, error } = await supabase
+    .from("product")
+    .select("sku, deskripsi");
+
+  if (error) {
+    console.error("LOAD PRODUCT ERROR:", error);
+    return;
+  }
+
+  console.log("PRODUCT DATA:", data);
+
+  setProducts(data ?? []);
+}
   // ================= LOAD DETAILS =================
-  async function loadDetails(receivingId: number) {
-    const { data, error } = await supabase
-      .from("receiving_details")
-      .select("*")
-      .eq("receiving_id", receivingId);
+ async function loadDetails(receivingId: number) {
+  console.log("=== LOAD RECEIVING DETAILS ===");
+  console.log("Receiving ID:", receivingId);
 
-    if (error) {
-      console.error(error);
-      return;
-    }
+  const { data, error } = await supabase
+    .from("receiving_details")
+    .select(`
+      id,
+      receiving_id,
+      sku,
+      quantity,
+      deskripsi
+    `)
+    .eq("receiving_id", receivingId);
 
-    setReceivingDetails(data || []);
-    setCheckingList([]);
+  if (error) {
+    console.error("=== RECEIVING DETAILS ERROR ===");
+    console.error("message:", error.message);
+    console.error("details:", error.details);
+    console.error("hint:", error.hint);
+    console.error("code:", error.code);
+    return;
   }
 
-  // ================= LOAD PRODUCTS =================
-  async function loadProducts() {
-    const { data, error } = await supabase
-      .from("product")
-      .select("sku, deskripsi");
+  console.log("=== RECEIVING DETAILS DATA ===");
+  console.log(data);
 
-    if (error) {
-      console.error(error);
-      return;
-    }
+  setReceivingDetails(data ?? []);
+  setCheckingList([]);
+}
 
-    setProducts(data || []);
-  }
 
-  useEffect(() => {
-    loadReceivings();
-    loadProducts();
-  }, []);
 
-  useEffect(() => {
-    if (selectedReceivingId) {
-      loadDetails(selectedReceivingId);
-    }
-  }, [selectedReceivingId]);
 
   // ================= ADD CHECKING =================
   function addChecking() {
@@ -151,6 +195,45 @@ export default function CheckingPage() {
     setDeskripsi("");
   }
 
+
+  // ================= CHECKED_BY =================
+async function loadCheckedBy() {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error) {
+    console.error("Gagal mengambil user login:", error);
+    return;
+  }
+
+  if (!user) {
+    console.error("Tidak ada user yang sedang login");
+    return;
+  }
+
+  const username =
+    user.user_metadata?.username ||
+    user.user_metadata?.name ||
+    user.email ||
+    "";
+
+  if (!username) {
+    console.error("Username user login tidak ditemukan");
+    return;
+  }
+
+  console.log("Checked By:", username);
+
+  setCheckedBy(username);
+}
+
+useEffect(() => {
+  loadReceivings();
+  loadProducts();
+  loadCheckedBy();
+}, []);
   // ================= EDIT QTY =================
   function updateCheckingQty(index: number, newQty: number) {
     if (newQty <= 0) {
@@ -238,21 +321,31 @@ export default function CheckingPage() {
         );
       }
     }
+if (!checkedBy) {
+  return alert("User login tidak ditemukan");
+}
 
-    const { error } = await supabase.rpc("create_checking", {
-      p_receiving_id: selectedReceivingId,
-      p_receiving_no: selectedReceivingNo,
-      p_note: note || null,
-      p_items: checkingList.map((x) => ({
-        sku: x.sku,
-        quantity: x.quantity,
-      })),
-    });
+const { error } = await supabase.rpc("create_checking", {
+  p_receiving_id: selectedReceivingId,
+  p_receiving_no: selectedReceivingNo,
+  p_note: note || null,
+  p_items: checkingList.map((x) => ({
+    sku: x.sku,
+    quantity: x.quantity,
+    deskripsi: x.deskripsi || "",
+    checked_by: checkedBy,
+  })),
+});
 
-    if (error) {
-      console.error(error);
-      return alert(error.message);
-    }
+if (error) {
+  console.error("CREATE CHECKING ERROR:", error);
+  console.error("CODE:", error.code);
+  console.error("MESSAGE:", error.message);
+  console.error("DETAILS:", error.details);
+  console.error("HINT:", error.hint);
+
+  return alert(`Gagal menyimpan checking: ${error.message}`);
+}
 
     // ================= CEK STATUS RECEIVING =================
 
@@ -336,32 +429,38 @@ export default function CheckingPage() {
 
       {/* RECEIVING SELECT */}
       <select
-        className="border p-2 w-full"
-        value={selectedReceivingId ?? ""}
-        onChange={(e) => {
-          const id = Number(e.target.value);
+  className="border p-2 w-full"
+  value={selectedReceivingId ?? ""}
+  onChange={(e) => {
+    const id = Number(e.target.value);
 
-          setSelectedReceivingId(id);
+    setSelectedReceivingId(id);
 
-          const selected = receivings.find(
-            (r) => r.id === id
-          );
+    const selected = receivings.find(
+      (r) => r.id === id
+    );
 
-          setSelectedReceivingNo(
-            selected?.receiving_no || ""
-          );
-        }}
-      >
-        <option value="">
-          -- Pilih Receiving --
-        </option>
+    const receivingNo = selected?.receiving_no || "";
 
-        {receivings.map((r) => (
-          <option key={r.id} value={r.id}>
-            {r.receiving_no} - {r.supplier_name}
-          </option>
-        ))}
-      </select>
+    setSelectedReceivingNo(receivingNo);
+
+    setCheckingList([]);
+
+    if (id) {
+      loadDetails(id);
+    }
+  }}
+>
+  <option value="">
+    -- Pilih Receiving --
+  </option>
+
+  {receivings.map((r) => (
+    <option key={r.id} value={r.id}>
+      {r.receiving_no} - {r.supplier_name}
+    </option>
+  ))}
+</select>
 
       {/* INPUT SKU */}
       <div className="border p-4 space-y-2">
@@ -371,20 +470,24 @@ export default function CheckingPage() {
           placeholder="SKU"
           value={sku}
           onChange={(e) => {
-            const value = e.target.value;
+  const value = e.target.value;
 
-            setSku(value);
+  setSku(value);
 
-            const product = products.find(
-              (p) =>
-                p.sku?.toLowerCase().trim() ===
-                value.toLowerCase().trim()
-            );
+  const cleanSku = value.toLowerCase().trim();
 
-            setDeskripsi(
-              product?.deskripsi || ""
-            );
-          }}
+  if (!cleanSku) {
+    setDeskripsi("");
+    return;
+  }
+
+  const product = products.find(
+    (p) =>
+      p.sku?.toLowerCase().trim() === cleanSku
+  );
+
+  setDeskripsi(product?.deskripsi || "");
+}}
         />
 
         <input
@@ -411,6 +514,9 @@ export default function CheckingPage() {
           + Tambah Item
         </button>
       </div>
+
+
+
 
       {/* CHECKING LIST */}
       <div className="border rounded-lg overflow-hidden">
