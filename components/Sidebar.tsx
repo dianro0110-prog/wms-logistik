@@ -29,7 +29,8 @@ export default function Sidebar() {
   const [openInventory, setOpenInventory] = useState(false);
   const [openOutbound, setOpenOutbound] = useState(false);
   const [openshipment, setOpenshipment] = useState(false);
-const router = useRouter();
+const [openreports, setOpenreports] = useState(false);
+  const router = useRouter();
 
 const [userName, setUserName] = useState("Loading...");
   // ✅ NEW: sidebar collapse
@@ -95,7 +96,7 @@ const handleLogout = async () => {
 
  
 
-    <div className="ml-4 space-y-2">
+   
 
       {/* MASTER */}
      <button
@@ -216,12 +217,7 @@ const handleLogout = async () => {
       Checking
     </Link>
 
-    <Link
-      href="/inbound/checking-report"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
-    >
-      Checking Report
-    </Link>
+    
 
     <Link
       href="/inbound/putaway"
@@ -230,12 +226,7 @@ const handleLogout = async () => {
       Putaway
     </Link>
 
-    <Link
-      href="/inbound/putaway-report"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
-    >
-      Putaway Report
-    </Link>
+   
   </div>
 )}
 
@@ -341,13 +332,7 @@ const handleLogout = async () => {
       Picking
     </Link>
 
-    <Link
-      href="/outbound/picking-report"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
-    >
-      Picking Report
-    </Link>
-
+    
     <Link
       href="/outbound/packing"
       className="block px-3 py-2 hover:bg-slate-800 rounded"
@@ -355,12 +340,7 @@ const handleLogout = async () => {
       Packing
     </Link>
 
-    <Link
-      href="/outbound/packing-report"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
-    >
-      Packing Report
-    </Link>
+    
   </div>
 )}
 
@@ -423,19 +403,70 @@ const handleLogout = async () => {
   </div>
 )}
 
-      {/* REPORT */}
-      <Link
-  href="/reports"
-  title={collapsed ? "reports" : ""}
-  className={`flex items-center rounded hover:bg-slate-800 ${
-    collapsed ? "justify-center px-2" : "gap-3 px-3"
-  } py-2`}
->
-  <Building2 size={18} />
-  {!collapsed && "reports"}
-</Link>
 
-    </div>
+
+
+      {/* REPORT */}
+
+<button
+  onClick={() => !collapsed && setOpenreports(!openreports)}
+  title={collapsed ? "reports" : ""}
+  className={`w-full flex items-center rounded hover:bg-slate-800 py-2 ${
+    collapsed
+      ? "justify-center px-2"
+      : "justify-between px-3"
+  }`}
+>
+  <div
+    className={`flex items-center ${
+      collapsed ? "" : "gap-3"
+    }`}
+  >
+    <ArrowUpCircle size={18} />
+
+    {!collapsed && "reports"}
+  </div>
+
+  {!collapsed && (
+    <span>
+      {openreports ? "▲" : "▼"}
+    </span>
+  )}
+</button>
+
+{openreports && !collapsed && (
+  <div className="ml-6 space-y-1">
+    <Link
+      href="/reports/checking-report"
+      className="block px-3 py-2 hover:bg-slate-800 rounded"
+    >
+      Checking Report
+    </Link>
+
+    <Link
+      href="/reports/putaway-report"
+      className="block px-3 py-2 hover:bg-slate-800 rounded"
+    >
+      Putaway Report
+    </Link>
+
+    <Link
+      href="/reports/picking-report"
+      className="block px-3 py-2 hover:bg-slate-800 rounded"
+    >
+      Picking Report
+    </Link>
+
+    <Link
+      href="/reports/packing-report"
+      className="block px-3 py-2 hover:bg-slate-800 rounded"
+    >
+      Packing Report
+    </Link>
+  </div>
+)}
+
+ 
   
 
 </nav>

@@ -11,19 +11,16 @@ import {
 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
 
-type CheckingDetail = {
+type PutawayDetail = {
   id: number;
-  receiving_id?: number;
+  putaway_id?: number | null;
   receiving_no: string;
   sku: string;
   quantity: number;
   deskripsi?: string | null;
-
-  // User yang melakukan checking
-  checked_by?: string | null;
-
-  // Waktu checking
-  checked_at?: string | null;
+  location?: string | null;
+  putaway_by?: string | null;
+  putaway_at?: string | null;
 };
 
 type Product = {
@@ -31,15 +28,18 @@ type Product = {
   deskripsi?: string | null;
 };
 
-export default function CheckingReportPage() {
+export default function PutawayReportPage() {
   const router = useRouter();
 
-  const [data, setData] = useState<CheckingDetail[]>([]);
+  const [data, setData] = useState<PutawayDetail[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
 
   const [loading, setLoading] = useState(false);
 
   const [selectedReceiving, setSelectedReceiving] =
+    useState("");
+
+  const [selectedLocation, setSelectedLocation] =
     useState("");
 
   const [search, setSearch] = useState("");
@@ -55,42 +55,43 @@ export default function CheckingReportPage() {
   }
 
   // ============================
-  // LOAD CHECKING REPORT
+  // LOAD PUTAWAY REPORT
   // ============================
-  async function loadCheckingReport() {
+  async function loadPutawayReport() {
     setLoading(true);
 
-    const { data: checkingData, error } = await supabase
-      .from("checking_details")
+    const { data: putawayData, error } = await supabase
+      .from("putaway_details")
       .select(`
         id,
-        receiving_id,
+        putaway_id,
         receiving_no,
         sku,
         quantity,
         deskripsi,
-        checked_by,
-        checked_at
+        location,
+        putaway_by,
+        putaway_at
       `)
-      .order("checked_at", {
+      .order("id", {
         ascending: false,
       });
 
     if (error) {
       console.error(
-        "Checking report error:",
+        "Putaway report error:",
         error
       );
 
       alert(
-        `Gagal mengambil data checking: ${error.message}`
+        `Gagal mengambil data putaway: ${error.message}`
       );
 
       setLoading(false);
       return;
     }
 
-    setData(checkingData || []);
+    setData(putawayData || []);
 
     setLoading(false);
   }
@@ -108,6 +109,7 @@ export default function CheckingReportPage() {
         "Product error:",
         error
       );
+
       return;
     }
 
@@ -118,7 +120,7 @@ export default function CheckingReportPage() {
   // INITIAL LOAD
   // ============================
   useEffect(() => {
-    loadCheckingReport();
+    loadPutawayReport();
     loadProducts();
   }, []);
 
@@ -126,7 +128,7 @@ export default function CheckingReportPage() {
   // GET DESCRIPTION
   // ============================
   function getDescription(
-    row: CheckingDetail
+    row: PutawayDetail
   ) {
     if (row.deskripsi) {
       return row.deskripsi;
@@ -154,6 +156,19 @@ export default function CheckingReportPage() {
   }, [data]);
 
   // ============================
+  // LOCATION LIST
+  // ============================
+  const locationList = useMemo(() => {
+    const values = data
+      .map((item) => item.location)
+      .filter(Boolean) as string[];
+
+    return Array.from(
+      new Set(values)
+    ).sort();
+  }, [data]);
+
+  // ============================
   // FILTER DATA
   // ============================
   const filteredData = useMemo(() => {
@@ -163,27 +178,39 @@ export default function CheckingReportPage() {
         item.receiving_no ===
           selectedReceiving;
 
+      const matchLocation =
+        !selectedLocation ||
+        clean(item.location) ===
+          clean(selectedLocation);
+
       const keyword =
         search.trim().toLowerCase();
 
       const matchSearch =
         !keyword ||
-        clean(item.sku).includes(keyword) ||
+        clean(item.receiving_no).includes(
+          keyword
+        ) ||
+        clean(item.sku).includes(
+          keyword
+        ) ||
         clean(
           getDescription(item)
         ).includes(keyword) ||
         clean(
-          item.checked_by
+          item.location
         ).includes(keyword);
 
       return (
         matchReceiving &&
+        matchLocation &&
         matchSearch
       );
     });
   }, [
     data,
     selectedReceiving,
+    selectedLocation,
     search,
     products,
   ]);
@@ -201,41 +228,55 @@ export default function CheckingReportPage() {
   }, [filteredData]);
 
   // ============================
-  // FORMAT DATE
+  // TOTAL RECEIVING
   // ============================
-  function formatDate(
-    value?: string | null
-  ) {
-    if (!value) {
-      return "-";
-    }
+  const totalReceiving = useMemo(() => {
+    const values = filteredData
+      .map(
+        (item) =>
+          item.receiving_no
+      )
+      .filter(Boolean);
 
-    const date = new Date(value);
+    return new Set(values).size;
+  }, [filteredData]);
 
-    if (Number.isNaN(date.getTime())) {
-      return value;
-    }
+  // ============================
+  // TOTAL SKU
+  // ============================
+  const totalSku = useMemo(() => {
+    const values = filteredData
+      .map((item) => item.sku)
+      .filter(Boolean);
 
-    return date.toLocaleString(
-      "id-ID",
-      {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      }
-    );
-  }
+    return new Set(
+      values.map((sku) => clean(sku))
+    ).size;
+  }, [filteredData]);
+
+  // ============================
+  // TOTAL LOCATION
+  // ============================
+  const totalLocation = useMemo(() => {
+    const values = filteredData
+      .map((item) => item.location)
+      .filter(Boolean);
+
+    return new Set(
+      values.map((loc) => clean(loc))
+    ).size;
+  }, [filteredData]);
 
   // ============================
   // REFRESH
   // ============================
   async function refresh() {
-    await loadCheckingReport();
+    await loadPutawayReport();
   }
 
+  // ============================
+  // RENDER
+  // ============================
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-6">
 
@@ -248,9 +289,10 @@ export default function CheckingReportPage() {
 
             <div className="flex items-center gap-3">
 
+              {/* BACK */}
               <button
                 onClick={() =>
-                  router.back()
+                  router.push("/system")
                 }
                 className="
                   flex
@@ -274,23 +316,26 @@ export default function CheckingReportPage() {
                 </span>
               </button>
 
+              {/* TITLE */}
               <div>
+
                 <div className="flex items-center gap-2">
 
                   <FileText
                     size={24}
-                    className="text-blue-600"
+                    className="text-purple-600"
                   />
 
                   <h1 className="text-xl md:text-2xl font-bold">
-                    Checking Report
+                    Putaway Report
                   </h1>
 
                 </div>
 
                 <p className="text-sm text-gray-500 mt-1">
-                  Report hasil checking inbound
+                  Report hasil putaway inbound
                 </p>
+
               </div>
 
             </div>
@@ -304,15 +349,17 @@ export default function CheckingReportPage() {
                 items-center
                 justify-center
                 gap-2
-                bg-blue-600
-                hover:bg-blue-700
+                bg-purple-600
+                hover:bg-purple-700
                 disabled:bg-gray-400
                 text-white
                 px-4
                 py-2
                 rounded-lg
+                transition
               "
             >
+
               <RefreshCw
                 size={18}
                 className={
@@ -323,6 +370,7 @@ export default function CheckingReportPage() {
               />
 
               Refresh
+
             </button>
 
           </div>
@@ -332,7 +380,7 @@ export default function CheckingReportPage() {
         {/* ================= FILTER ================= */}
         <div className="bg-white border rounded-xl p-4 shadow-sm">
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
 
             {/* RECEIVING */}
             <select
@@ -350,9 +398,10 @@ export default function CheckingReportPage() {
                 w-full
                 focus:outline-none
                 focus:ring-2
-                focus:ring-blue-500
+                focus:ring-purple-500
               "
             >
+
               <option value="">
                 Semua Receiving
               </option>
@@ -367,6 +416,44 @@ export default function CheckingReportPage() {
                   </option>
                 )
               )}
+
+            </select>
+
+            {/* LOCATION */}
+            <select
+              value={selectedLocation}
+              onChange={(e) =>
+                setSelectedLocation(
+                  e.target.value
+                )
+              }
+              className="
+                border
+                rounded-lg
+                px-3
+                py-2
+                w-full
+                focus:outline-none
+                focus:ring-2
+                focus:ring-purple-500
+              "
+            >
+
+              <option value="">
+                Semua Location
+              </option>
+
+              {locationList.map(
+                (location) => (
+                  <option
+                    key={location}
+                    value={location}
+                  >
+                    {location}
+                  </option>
+                )
+              )}
+
             </select>
 
             {/* SEARCH */}
@@ -390,7 +477,7 @@ export default function CheckingReportPage() {
                     e.target.value
                   )
                 }
-                placeholder="Cari SKU, deskripsi, atau user..."
+                placeholder="Cari receiving, SKU, lokasi..."
                 className="
                   border
                   rounded-lg
@@ -400,7 +487,7 @@ export default function CheckingReportPage() {
                   w-full
                   focus:outline-none
                   focus:ring-2
-                  focus:ring-blue-500
+                  focus:ring-purple-500
                 "
               />
 
@@ -411,8 +498,9 @@ export default function CheckingReportPage() {
         </div>
 
         {/* ================= SUMMARY ================= */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
 
+          {/* TOTAL BARIS */}
           <div className="bg-white border rounded-xl p-4 shadow-sm">
 
             <p className="text-sm text-gray-500">
@@ -425,10 +513,11 @@ export default function CheckingReportPage() {
 
           </div>
 
+          {/* TOTAL QTY */}
           <div className="bg-white border rounded-xl p-4 shadow-sm">
 
             <p className="text-sm text-gray-500">
-              Total Qty Checking
+              Total Qty Putaway
             </p>
 
             <p className="text-2xl font-bold mt-1">
@@ -437,16 +526,28 @@ export default function CheckingReportPage() {
 
           </div>
 
+          {/* TOTAL RECEIVING */}
           <div className="bg-white border rounded-xl p-4 shadow-sm">
 
             <p className="text-sm text-gray-500">
-              Receiving
+              Total Receiving
             </p>
 
             <p className="text-2xl font-bold mt-1">
-              {selectedReceiving
-                ? selectedReceiving
-                : receivingList.length}
+              {totalReceiving}
+            </p>
+
+          </div>
+
+          {/* TOTAL LOCATION */}
+          <div className="bg-white border rounded-xl p-4 shadow-sm">
+
+            <p className="text-sm text-gray-500">
+              Total Location
+            </p>
+
+            <p className="text-2xl font-bold mt-1">
+              {totalLocation}
             </p>
 
           </div>
@@ -481,15 +582,19 @@ export default function CheckingReportPage() {
                   </th>
 
                   <th className="border p-3 text-right">
-                    Qty
+                    Qty Putaway
                   </th>
 
                   <th className="border p-3 text-left">
-                    User Checking
+                    Location
                   </th>
 
-                  <th className="border p-3 text-left whitespace-nowrap">
-                    Waktu Checking
+                  <th className="border p-3 text-left">
+                    User
+                  </th>
+
+                  <th className="border p-3 text-left">
+                    Putaway_at
                   </th>
 
                 </tr>
@@ -506,6 +611,7 @@ export default function CheckingReportPage() {
                       colSpan={7}
                       className="border p-8 text-center"
                     >
+
                       <div className="flex justify-center items-center gap-2 text-gray-500">
 
                         <RefreshCw
@@ -516,6 +622,7 @@ export default function CheckingReportPage() {
                         Loading data...
 
                       </div>
+
                     </td>
 
                   </tr>
@@ -528,7 +635,7 @@ export default function CheckingReportPage() {
                       colSpan={7}
                       className="border p-8 text-center text-gray-500"
                     >
-                      Tidak ada data checking
+                      Tidak ada hasil putaway
                     </td>
 
                   </tr>
@@ -540,42 +647,50 @@ export default function CheckingReportPage() {
 
                       <tr
                         key={item.id}
-                        className="hover:bg-gray-50"
+                        className="hover:bg-purple-50"
                       >
 
+                        {/* NO */}
                         <td className="border p-3">
                           {index + 1}
                         </td>
 
+                        {/* RECEIVING */}
                         <td className="border p-3 font-medium">
                           {item.receiving_no}
                         </td>
 
+                        {/* SKU */}
                         <td className="border p-3 font-mono">
                           {item.sku}
                         </td>
 
+                        {/* DESKRIPSI */}
                         <td className="border p-3">
                           {getDescription(
                             item
                           )}
                         </td>
 
+                        {/* QTY */}
                         <td className="border p-3 text-right font-semibold">
                           {Number(
                             item.quantity || 0
                           )}
                         </td>
 
-                        <td className="border p-3">
-                          {item.checked_by ||
-                            "-"}
+                        {/* LOCATION */}
+                        <td className="border p-3 font-medium">
+                          {item.location || "-"}
                         </td>
 
-                        <td className="border p-3 whitespace-nowrap">
-                          {formatDate(
-                            item.checked_at
-                          )}
+                        {/* PUTAWAY ID */}
+                        <td className="border p-3">
+                          {item.putaway_by || "-"}
+                        </td>
+
+                        <td className="border p-3">
+                          {item.putaway_at || "-"}
                         </td>
 
                       </tr>
@@ -598,3 +713,4 @@ export default function CheckingReportPage() {
     </div>
   );
 }
+

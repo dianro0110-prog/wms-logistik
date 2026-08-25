@@ -23,7 +23,7 @@ export default function PutawayPage() {
 
   const clean = (v: any) =>
     (v ?? "").toString().trim().toLowerCase();
-  const [checkedBy, setCheckedBy] = useState("");
+  const [putawayBy, setPutawayBy] = useState("");
 
   // ================= RECEIVING =================
  async function loadReceivingList() {
@@ -70,7 +70,7 @@ async function loadPutawayBy() {
       user.email ||
       "";
 
-    setCheckedBy(username);
+    setPutawayBy(username);
   }
 }
 
@@ -226,16 +226,18 @@ async function loadPutawayBy() {
       return alert("Gagal insert header");
 
     // DETAIL
-    const { error: detailError } = await supabase
-      .from("putaway_details")
-      .insert({
-        putaway_id: header.id,
-        receiving_no: selectedReceivingNo,
-        sku,
-        deskripsi: product?.deskripsi || deskripsi,
-        quantity: qty,
-        location,
-      });
+   const { error: detailError } = await supabase
+  .from("putaway_details")
+  .insert({
+    putaway_id: header.id,
+    receiving_no: selectedReceivingNo,
+    sku,
+    deskripsi: product?.deskripsi || deskripsi,
+    quantity: qty,
+    location,
+    putaway_by: putawayBy,
+    putaway_at: new Date().toISOString(),
+  });
 
     if (detailError) return alert("Gagal insert detail");
 
