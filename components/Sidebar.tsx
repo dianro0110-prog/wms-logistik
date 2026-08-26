@@ -377,28 +377,28 @@ const handleLogout = async () => {
       href="/shipment/online"
       className="block px-3 py-2 hover:bg-slate-800 rounded"
     >
-      Shipment Online
+      Shipment B2C
     </Link>
 
     <Link
       href="/shipment/online-report"
       className="block px-3 py-2 hover:bg-slate-800 rounded"
     >
-      Shipment Online Report
+      B2C Report
     </Link>
 
     <Link
       href="/shipment/offline"
       className="block px-3 py-2 hover:bg-slate-800 rounded"
     >
-      Shipment Offline
+      Shipment B2B
     </Link>
 
     <Link
       href="/shipment/offline-report"
       className="block px-3 py-2 hover:bg-slate-800 rounded"
     >
-      Shipment Offline Report
+      B2B Report
     </Link>
   </div>
 )}
@@ -424,7 +424,7 @@ const handleLogout = async () => {
   >
     <ArrowUpCircle size={18} />
 
-    {!collapsed && "reports"}
+    {!collapsed && "Reports"}
   </div>
 
   {!collapsed && (

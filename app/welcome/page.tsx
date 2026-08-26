@@ -206,8 +206,7 @@ export default function WelcomePage() {
               "
             >
               Manage your warehouse operations efficiently.
-              Select a menu from the sidebar to start receiving,
-              checking, putaway, allocation, and picking activities.
+              
             </p>
 
           </div>
