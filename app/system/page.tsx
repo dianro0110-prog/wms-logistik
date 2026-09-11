@@ -1,5 +1,7 @@
+
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Warehouse,
@@ -13,9 +15,11 @@ import {
   Box,
   ArrowLeft,
   MoveRight,
+  UserCircle,
+  LogOut,
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
-import { useState } from "react";
+import { supabase } from "../../lib/supabase";
 
 export default function SystemPage() {
   const router = useRouter();
@@ -23,6 +27,55 @@ export default function SystemPage() {
   const [mobileMenu, setMobileMenu] = useState<
     "main" | "inbound" | "outbound" | "inventory"
   >("main");
+
+  const [userEmail, setUserEmail] = useState<string>("");
+
+  /* ====================================================== */
+  /* ================= GET LOGIN USER ===================== */
+  /* ====================================================== */
+
+  useEffect(() => {
+    const getUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        setUserEmail(user.email || "");
+      }
+    };
+
+    getUser();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUserEmail(session.user.email || "");
+      } else {
+        setUserEmail("");
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  /* ====================================================== */
+  /* ======================= LOGOUT ======================= */
+  /* ====================================================== */
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      console.error("Logout error:", error);
+      return;
+    }
+
+    router.push("/login");
+  };
 
   return (
     <div className="flex min-h-screen bg-slate-100">
@@ -56,7 +109,91 @@ export default function SystemPage() {
           }}
         />
 
+        {/* ================================================== */}
+        {/* ================= USER LOGIN ===================== */}
+        {/* ================================================== */}
+
+        <div
+          className="
+            absolute
+            right-3
+            top-3
+            z-50
+            flex
+            items-center
+            gap-2
+            sm:right-5
+            sm:top-5
+            md:right-6
+            md:top-6
+          "
+        >
+          {/* USER INFO */}
+          <div
+            className="
+              flex
+              items-center
+              gap-2
+              rounded-xl
+              border
+              border-slate-200
+              bg-white
+              px-3
+              py-2
+              shadow-sm
+            "
+          >
+            <UserCircle
+              size={25}
+              strokeWidth={1.7}
+              className="text-blue-950"
+            />
+
+            <div className="hidden sm:block">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                Logged in
+              </p>
+
+              <p className="max-w-[180px] truncate text-xs font-semibold text-slate-700">
+                {userEmail || "User"}
+              </p>
+            </div>
+          </div>
+
+          {/* LOGOUT */}
+          <button
+            type="button"
+            onClick={handleLogout}
+            title="Logout"
+            className="
+              flex
+              h-10
+              w-10
+              items-center
+              justify-center
+              rounded-xl
+              border
+              border-red-100
+              bg-white
+              text-red-500
+              shadow-sm
+              transition-all
+              duration-200
+              hover:border-red-200
+              hover:bg-red-50
+              hover:text-red-600
+              hover:shadow-md
+              active:scale-95
+              sm:h-11
+              sm:w-11
+            "
+          >
+            <LogOut size={19} strokeWidth={1.8} />
+          </button>
+        </div>
+
         {/* ================= BACK BUTTON ================= */}
+        {/* Hanya tampil di DESKTOP */}
         <button
           type="button"
           onClick={() => router.push("/welcome")}
@@ -65,7 +202,7 @@ export default function SystemPage() {
             z-20
             group
             mb-4
-            flex
+            hidden
             items-center
             gap-1.5
             rounded-lg
@@ -89,6 +226,7 @@ export default function SystemPage() {
             sm:px-4
             sm:py-2.5
             sm:text-base
+            md:flex
           "
         >
           <ArrowLeftCircle
@@ -196,7 +334,7 @@ export default function SystemPage() {
             relative
             z-10
             flex
-            min-h-[calc(100vh-90px)]
+            min-h-[calc(100vh-40px)]
             flex-col
             justify-center
             px-2
@@ -260,12 +398,60 @@ export default function SystemPage() {
                   Warehouse Management System
                 </p>
 
+                {/* MOBILE USER */}
+                <div
+                  className="
+                    mx-auto
+                    mt-4
+                    flex
+                    w-fit
+                    items-center
+                    gap-2
+                    rounded-full
+                    border
+                    border-slate-200
+                    bg-white
+                    px-3
+                    py-2
+                    shadow-sm
+                  "
+                >
+                  <UserCircle
+                    size={20}
+                    className="text-blue-950"
+                  />
+
+                  <span className="max-w-[180px] truncate text-xs font-medium text-slate-600">
+                    {userEmail || "User"}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    title="Logout"
+                    className="
+                      ml-1
+                      flex
+                      h-7
+                      w-7
+                      items-center
+                      justify-center
+                      rounded-full
+                      text-red-500
+                      transition
+                      hover:bg-red-50
+                    "
+                  >
+                    <LogOut size={15} />
+                  </button>
+                </div>
+
               </div>
 
               {/* MOBILE MENU */}
               <div className="mx-auto w-full max-w-sm space-y-4">
 
-                {/* ================= INBOUND ================= */}
+                {/* INBOUND */}
                 <button
                   type="button"
                   onClick={() => setMobileMenu("inbound")}
@@ -320,7 +506,7 @@ export default function SystemPage() {
                   </span>
                 </button>
 
-                {/* ================= OUTBOUND ================= */}
+                {/* OUTBOUND */}
                 <button
                   type="button"
                   onClick={() => setMobileMenu("outbound")}
@@ -375,7 +561,7 @@ export default function SystemPage() {
                   </span>
                 </button>
 
-                {/* ================= INVENTORY ================= */}
+                {/* INVENTORY */}
                 <button
                   type="button"
                   onClick={() => setMobileMenu("inventory")}
@@ -463,10 +649,7 @@ export default function SystemPage() {
                     ring-blue-100
                   "
                 >
-                  <PackagePlus
-                    size={34}
-                    strokeWidth={1.7}
-                  />
+                  <PackagePlus size={34} strokeWidth={1.7} />
                 </div>
 
                 <h1 className="mt-4 text-2xl font-extrabold text-blue-950">
@@ -515,10 +698,7 @@ export default function SystemPage() {
                       text-blue-800
                     "
                   >
-                    <ClipboardCheck
-                      size={28}
-                      strokeWidth={1.8}
-                    />
+                    <ClipboardCheck size={28} strokeWidth={1.8} />
                   </div>
 
                   <div>
@@ -570,10 +750,7 @@ export default function SystemPage() {
                       text-indigo-700
                     "
                   >
-                    <PackageOpen
-                      size={28}
-                      strokeWidth={1.8}
-                    />
+                    <PackageOpen size={28} strokeWidth={1.8} />
                   </div>
 
                   <div>
@@ -593,7 +770,6 @@ export default function SystemPage() {
 
               </div>
 
-              {/* BACK */}
               <button
                 type="button"
                 onClick={() => setMobileMenu("main")}
@@ -644,10 +820,7 @@ export default function SystemPage() {
                     ring-orange-100
                   "
                 >
-                  <PackageCheck
-                    size={34}
-                    strokeWidth={1.7}
-                  />
+                  <PackageCheck size={34} strokeWidth={1.7} />
                 </div>
 
                 <h1 className="mt-4 text-2xl font-extrabold text-orange-700">
@@ -696,10 +869,7 @@ export default function SystemPage() {
                       text-orange-700
                     "
                   >
-                    <ScanLine
-                      size={28}
-                      strokeWidth={1.8}
-                    />
+                    <ScanLine size={28} strokeWidth={1.8} />
                   </div>
 
                   <div>
@@ -751,10 +921,7 @@ export default function SystemPage() {
                       text-amber-700
                     "
                   >
-                    <Box
-                      size={28}
-                      strokeWidth={1.8}
-                    />
+                    <Box size={28} strokeWidth={1.8} />
                   </div>
 
                   <div>
@@ -774,7 +941,6 @@ export default function SystemPage() {
 
               </div>
 
-              {/* BACK */}
               <button
                 type="button"
                 onClick={() => setMobileMenu("main")}
@@ -825,10 +991,7 @@ export default function SystemPage() {
                     ring-emerald-100
                   "
                 >
-                  <Boxes
-                    size={34}
-                    strokeWidth={1.7}
-                  />
+                  <Boxes size={34} strokeWidth={1.7} />
                 </div>
 
                 <h1 className="mt-4 text-2xl font-extrabold text-emerald-700">
@@ -877,10 +1040,7 @@ export default function SystemPage() {
                       text-emerald-700
                     "
                   >
-                    <MoveRight
-                      size={28}
-                      strokeWidth={1.8}
-                    />
+                    <MoveRight size={28} strokeWidth={1.8} />
                   </div>
 
                   <div>
@@ -900,7 +1060,6 @@ export default function SystemPage() {
 
               </div>
 
-              {/* BACK */}
               <button
                 type="button"
                 onClick={() => setMobileMenu("main")}
