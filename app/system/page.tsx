@@ -28,7 +28,7 @@ export default function SystemPage() {
     "main" | "inbound" | "outbound" | "inventory"
   >("main");
 
-  const [userEmail, setUserEmail] = useState<string>("");
+  const [userName, setUserName] = useState<string>("User");
 
   /* ====================================================== */
   /* ================= GET LOGIN USER ===================== */
@@ -41,7 +41,13 @@ export default function SystemPage() {
       } = await supabase.auth.getUser();
 
       if (user) {
-        setUserEmail(user.email || "");
+        const name =
+          user.user_metadata?.full_name ||
+          user.user_metadata?.name ||
+          user.email?.split("@")[0] ||
+          "User";
+
+        setUserName(name);
       }
     };
 
@@ -51,9 +57,15 @@ export default function SystemPage() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        setUserEmail(session.user.email || "");
+        const name =
+          session.user.user_metadata?.full_name ||
+          session.user.user_metadata?.name ||
+          session.user.email?.split("@")[0] ||
+          "User";
+
+        setUserName(name);
       } else {
-        setUserEmail("");
+        setUserName("User");
       }
     });
 
@@ -80,16 +92,25 @@ export default function SystemPage() {
   return (
     <div className="flex min-h-screen bg-slate-100">
 
-      {/* ================= SIDEBAR ================= */}
+      {/* ================================================== */}
+      {/* ===================== SIDEBAR ==================== */}
+      {/* ================================================== */}
+
       {/* Hanya tampil di WEB / DESKTOP */}
       <div className="hidden md:block">
         <Sidebar />
       </div>
 
-      {/* ================= MAIN CONTENT ================= */}
+      {/* ================================================== */}
+      {/* ================= MAIN CONTENT =================== */}
+      {/* ================================================== */}
+
       <main className="relative flex-1 overflow-hidden p-3 sm:p-5 md:p-6">
 
+        {/* ================================================== */}
         {/* ================= BACKGROUND GRID ================= */}
+        {/* ================================================== */}
+
         <div
           className="pointer-events-none absolute inset-0 opacity-60"
           style={{
@@ -110,25 +131,27 @@ export default function SystemPage() {
         />
 
         {/* ================================================== */}
-        {/* ================= USER LOGIN ===================== */}
+        {/* ============== USER DESKTOP ====================== */}
         {/* ================================================== */}
+
+        {/* 
+          User + Logout DESKTOP
+          Tetap tampil di desktop.
+        */}
 
         <div
           className="
             absolute
-            right-3
-            top-3
+            right-4
+            top-4
             z-50
-            flex
+            hidden
             items-center
             gap-2
-            sm:right-5
-            sm:top-5
-            md:right-6
-            md:top-6
+            md:flex
           "
         >
-          {/* USER INFO */}
+          {/* USER NAME */}
           <div
             className="
               flex
@@ -149,18 +172,18 @@ export default function SystemPage() {
               className="text-blue-950"
             />
 
-            <div className="hidden sm:block">
-              <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
-                Logged in
+            <div>
+              <p className="text-[9px] font-medium uppercase tracking-wider text-slate-400">
+                User
               </p>
 
-              <p className="max-w-[180px] truncate text-xs font-semibold text-slate-700">
-                {userEmail || "User"}
+              <p className="max-w-[180px] truncate text-xs font-bold text-slate-700">
+                {userName}
               </p>
             </div>
           </div>
 
-          {/* LOGOUT */}
+          {/* LOGOUT DESKTOP */}
           <button
             type="button"
             onClick={handleLogout}
@@ -184,16 +207,21 @@ export default function SystemPage() {
               hover:text-red-600
               hover:shadow-md
               active:scale-95
-              sm:h-11
-              sm:w-11
             "
           >
-            <LogOut size={19} strokeWidth={1.8} />
+            <LogOut
+              size={19}
+              strokeWidth={1.8}
+            />
           </button>
         </div>
 
-        {/* ================= BACK BUTTON ================= */}
+        {/* ================================================== */}
+        {/* ================= BACK BUTTON ==================== */}
+        {/* ================================================== */}
+
         {/* Hanya tampil di DESKTOP */}
+
         <button
           type="button"
           onClick={() => router.push("/welcome")}
@@ -348,7 +376,91 @@ export default function SystemPage() {
 
           {mobileMenu === "main" && (
             <>
-              {/* MOBILE HEADER */}
+              {/* ================================================== */}
+              {/* ============== MOBILE USER TOP RIGHT ============== */}
+              {/* ================================================== */}
+
+              <div
+                className="
+                  absolute
+                  right-0
+                  top-0
+                  z-50
+                  flex
+                  items-center
+                  gap-1.5
+                "
+              >
+                {/* USER NAME */}
+
+                <div
+                  className="
+                    flex
+                    items-center
+                    gap-1.5
+                    rounded-full
+                    border
+                    border-slate-200
+                    bg-white
+                    px-2.5
+                    py-1.5
+                    shadow-sm
+                  "
+                >
+                  <UserCircle
+                    size={19}
+                    strokeWidth={1.8}
+                    className="text-blue-950"
+                  />
+
+                  <span
+                    className="
+                      max-w-[110px]
+                      truncate
+                      text-[11px]
+                      font-bold
+                      text-slate-700
+                    "
+                  >
+                    {userName}
+                  </span>
+                </div>
+
+                {/* LOGOUT */}
+
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  title="Logout"
+                  className="
+                    flex
+                    h-8
+                    w-8
+                    items-center
+                    justify-center
+                    rounded-full
+                    border
+                    border-red-100
+                    bg-white
+                    text-red-500
+                    shadow-sm
+                    transition
+                    hover:bg-red-50
+                    hover:text-red-600
+                    active:scale-95
+                  "
+                >
+                  <LogOut
+                    size={15}
+                    strokeWidth={1.8}
+                  />
+                </button>
+              </div>
+
+              {/* ================================================== */}
+              {/* ================= MOBILE HEADER ================== */}
+              {/* ================================================== */}
+
               <div className="mb-7 text-center">
 
                 <div
@@ -398,60 +510,16 @@ export default function SystemPage() {
                   Warehouse Management System
                 </p>
 
-                {/* MOBILE USER */}
-                <div
-                  className="
-                    mx-auto
-                    mt-4
-                    flex
-                    w-fit
-                    items-center
-                    gap-2
-                    rounded-full
-                    border
-                    border-slate-200
-                    bg-white
-                    px-3
-                    py-2
-                    shadow-sm
-                  "
-                >
-                  <UserCircle
-                    size={20}
-                    className="text-blue-950"
-                  />
-
-                  <span className="max-w-[180px] truncate text-xs font-medium text-slate-600">
-                    {userEmail || "User"}
-                  </span>
-
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    title="Logout"
-                    className="
-                      ml-1
-                      flex
-                      h-7
-                      w-7
-                      items-center
-                      justify-center
-                      rounded-full
-                      text-red-500
-                      transition
-                      hover:bg-red-50
-                    "
-                  >
-                    <LogOut size={15} />
-                  </button>
-                </div>
-
               </div>
 
-              {/* MOBILE MENU */}
+              {/* ================================================== */}
+              {/* ================= MOBILE MENU ==================== */}
+              {/* ================================================== */}
+
               <div className="mx-auto w-full max-w-sm space-y-4">
 
                 {/* INBOUND */}
+
                 <button
                   type="button"
                   onClick={() => setMobileMenu("inbound")}
@@ -488,7 +556,10 @@ export default function SystemPage() {
                       text-blue-800
                     "
                   >
-                    <PackagePlus size={28} strokeWidth={1.8} />
+                    <PackagePlus
+                      size={28}
+                      strokeWidth={1.8}
+                    />
                   </div>
 
                   <div>
@@ -507,6 +578,7 @@ export default function SystemPage() {
                 </button>
 
                 {/* OUTBOUND */}
+
                 <button
                   type="button"
                   onClick={() => setMobileMenu("outbound")}
@@ -543,7 +615,10 @@ export default function SystemPage() {
                       text-orange-700
                     "
                   >
-                    <PackageCheck size={28} strokeWidth={1.8} />
+                    <PackageCheck
+                      size={28}
+                      strokeWidth={1.8}
+                    />
                   </div>
 
                   <div>
@@ -562,6 +637,7 @@ export default function SystemPage() {
                 </button>
 
                 {/* INVENTORY */}
+
                 <button
                   type="button"
                   onClick={() => setMobileMenu("inventory")}
@@ -598,7 +674,10 @@ export default function SystemPage() {
                       text-emerald-700
                     "
                   >
-                    <Boxes size={28} strokeWidth={1.8} />
+                    <Boxes
+                      size={28}
+                      strokeWidth={1.8}
+                    />
                   </div>
 
                   <div>
@@ -619,6 +698,7 @@ export default function SystemPage() {
               </div>
 
               {/* MOBILE FOOTER */}
+
               <p className="mt-8 text-center text-[10px] text-slate-400">
                 ZEE-WMS Mobile
               </p>
@@ -649,7 +729,10 @@ export default function SystemPage() {
                     ring-blue-100
                   "
                 >
-                  <PackagePlus size={34} strokeWidth={1.7} />
+                  <PackagePlus
+                    size={34}
+                    strokeWidth={1.7}
+                  />
                 </div>
 
                 <h1 className="mt-4 text-2xl font-extrabold text-blue-950">
@@ -665,6 +748,7 @@ export default function SystemPage() {
               <div className="mx-auto w-full max-w-sm space-y-4">
 
                 {/* CHECKING */}
+
                 <button
                   type="button"
                   onClick={() => router.push("/inbound/checking")}
@@ -698,7 +782,10 @@ export default function SystemPage() {
                       text-blue-800
                     "
                   >
-                    <ClipboardCheck size={28} strokeWidth={1.8} />
+                    <ClipboardCheck
+                      size={28}
+                      strokeWidth={1.8}
+                    />
                   </div>
 
                   <div>
@@ -717,6 +804,7 @@ export default function SystemPage() {
                 </button>
 
                 {/* PUTAWAY */}
+
                 <button
                   type="button"
                   onClick={() => router.push("/inbound/putaway")}
@@ -750,7 +838,10 @@ export default function SystemPage() {
                       text-indigo-700
                     "
                   >
-                    <PackageOpen size={28} strokeWidth={1.8} />
+                    <PackageOpen
+                      size={28}
+                      strokeWidth={1.8}
+                    />
                   </div>
 
                   <div>
@@ -769,6 +860,8 @@ export default function SystemPage() {
                 </button>
 
               </div>
+
+              {/* BACK */}
 
               <button
                 type="button"
@@ -820,7 +913,10 @@ export default function SystemPage() {
                     ring-orange-100
                   "
                 >
-                  <PackageCheck size={34} strokeWidth={1.7} />
+                  <PackageCheck
+                    size={34}
+                    strokeWidth={1.7}
+                  />
                 </div>
 
                 <h1 className="mt-4 text-2xl font-extrabold text-orange-700">
@@ -836,6 +932,7 @@ export default function SystemPage() {
               <div className="mx-auto w-full max-w-sm space-y-4">
 
                 {/* PICKING */}
+
                 <button
                   type="button"
                   onClick={() => router.push("/outbound/picking")}
@@ -869,7 +966,10 @@ export default function SystemPage() {
                       text-orange-700
                     "
                   >
-                    <ScanLine size={28} strokeWidth={1.8} />
+                    <ScanLine
+                      size={28}
+                      strokeWidth={1.8}
+                    />
                   </div>
 
                   <div>
@@ -888,6 +988,7 @@ export default function SystemPage() {
                 </button>
 
                 {/* PACKING */}
+
                 <button
                   type="button"
                   onClick={() => router.push("/outbound/packing")}
@@ -921,7 +1022,10 @@ export default function SystemPage() {
                       text-amber-700
                     "
                   >
-                    <Box size={28} strokeWidth={1.8} />
+                    <Box
+                      size={28}
+                      strokeWidth={1.8}
+                    />
                   </div>
 
                   <div>
@@ -940,6 +1044,8 @@ export default function SystemPage() {
                 </button>
 
               </div>
+
+              {/* BACK */}
 
               <button
                 type="button"
@@ -991,7 +1097,10 @@ export default function SystemPage() {
                     ring-emerald-100
                   "
                 >
-                  <Boxes size={34} strokeWidth={1.7} />
+                  <Boxes
+                    size={34}
+                    strokeWidth={1.7}
+                  />
                 </div>
 
                 <h1 className="mt-4 text-2xl font-extrabold text-emerald-700">
@@ -1007,6 +1116,7 @@ export default function SystemPage() {
               <div className="mx-auto w-full max-w-sm">
 
                 {/* MOVEMENT */}
+
                 <button
                   type="button"
                   onClick={() => router.push("/inventory/movement")}
@@ -1040,7 +1150,10 @@ export default function SystemPage() {
                       text-emerald-700
                     "
                   >
-                    <MoveRight size={28} strokeWidth={1.8} />
+                    <MoveRight
+                      size={28}
+                      strokeWidth={1.8}
+                    />
                   </div>
 
                   <div>
@@ -1059,6 +1172,8 @@ export default function SystemPage() {
                 </button>
 
               </div>
+
+              {/* BACK */}
 
               <button
                 type="button"
