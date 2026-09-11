@@ -4,6 +4,9 @@ import { useRouter } from "next/navigation";
 import {
   Warehouse,
   ArrowLeftCircle,
+  PackagePlus,
+  PackageCheck,
+  Boxes,
 } from "lucide-react";
 import Sidebar from "../../components/Sidebar";
 
@@ -14,7 +17,10 @@ export default function SystemPage() {
     <div className="flex min-h-screen bg-slate-100">
 
       {/* ================= SIDEBAR ================= */}
-      <Sidebar />
+      {/* Hanya tampil di WEB / DESKTOP */}
+      <div className="hidden md:block">
+        <Sidebar />
+      </div>
 
       {/* ================= MAIN CONTENT ================= */}
       <main className="relative flex-1 overflow-hidden p-3 sm:p-5 md:p-6">
@@ -88,21 +94,25 @@ export default function SystemPage() {
           <span>Kembali</span>
         </button>
 
-        {/* ================= CENTER CONTENT ================= */}
+        {/* ====================================================== */}
+        {/* ================= DESKTOP VERSION ==================== */}
+        {/* ====================================================== */}
+
         <div
           className="
             pointer-events-none
             absolute
             inset-0
-            flex
+            hidden
             items-center
             justify-center
             px-5
+            md:flex
           "
         >
           <div className="flex w-full max-w-md flex-col items-center justify-center">
 
-            {/* ================= LOGO ================= */}
+            {/* LOGO */}
             <div
               className="
                 flex
@@ -128,7 +138,7 @@ export default function SystemPage() {
               />
             </div>
 
-            {/* ================= ZEE-WMS ================= */}
+            {/* ZEE-WMS */}
             <h1
               className="
                 mt-5
@@ -145,7 +155,7 @@ export default function SystemPage() {
               ZEE-WMS
             </h1>
 
-            {/* ================= SUBTITLE ================= */}
+            {/* SUBTITLE */}
             <p
               className="
                 mt-2
@@ -163,32 +173,253 @@ export default function SystemPage() {
               Warehouse Management System
             </p>
 
-            {/* ================= MOBILE DESCRIPTION ================= */}
+          </div>
+        </div>
+
+        {/* ====================================================== */}
+        {/* ================= MOBILE VERSION ===================== */}
+        {/* ====================================================== */}
+
+        <div
+          className="
+            relative
+            z-10
+            flex
+            min-h-[calc(100vh-90px)]
+            flex-col
+            justify-center
+            px-2
+            md:hidden
+          "
+        >
+
+          {/* MOBILE HEADER */}
+          <div className="mb-7 text-center">
+
             <div
               className="
-                mt-7
+                mx-auto
+                flex
+                h-16
+                w-16
+                items-center
+                justify-center
+                rounded-2xl
+                bg-blue-950
+                shadow-lg
+                ring-4
+                ring-blue-100
+              "
+            >
+              <Warehouse
+                size={34}
+                strokeWidth={1.7}
+                className="text-white"
+              />
+            </div>
+
+            <h1
+              className="
+                mt-4
+                text-2xl
+                font-extrabold
+                tracking-[0.14em]
+                text-blue-950
+              "
+            >
+              ZEE-WMS
+            </h1>
+
+            <p
+              className="
+                mt-1
+                text-[9px]
+                font-semibold
+                uppercase
+                tracking-[0.2em]
+                text-slate-500
+              "
+            >
+              Warehouse Management System
+            </p>
+
+          </div>
+
+          {/* MOBILE MENU */}
+          <div className="mx-auto w-full max-w-sm space-y-4">
+
+            {/* INBOUND */}
+            <button
+              type="button"
+              onClick={() => router.push("/inbound")}
+              className="
+                group
+                flex
                 w-full
-                max-w-xs
+                items-center
+                gap-4
                 rounded-2xl
                 border
                 border-slate-200
-                bg-white/80
-                px-5
-                py-4
-                text-center
-                shadow-sm
-                backdrop-blur-sm
-                sm:hidden
+                bg-white
+                p-4
+                text-left
+                shadow-md
+                transition-all
+                duration-200
+                active:scale-[0.98]
+                hover:-translate-y-0.5
+                hover:shadow-lg
               "
             >
-              <p className="text-xs leading-relaxed text-slate-500">
-                Sistem manajemen gudang untuk membantu
-                mengelola aktivitas warehouse secara
-                efisien dan terintegrasi.
-              </p>
-            </div>
+              <div
+                className="
+                  flex
+                  h-14
+                  w-14
+                  shrink-0
+                  items-center
+                  justify-center
+                  rounded-xl
+                  bg-blue-100
+                  text-blue-800
+                "
+              >
+                <PackagePlus size={28} strokeWidth={1.8} />
+              </div>
+
+              <div>
+                <h2 className="text-base font-bold text-slate-800">
+                  Inbound
+                </h2>
+
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Receiving & Putaway
+                </p>
+              </div>
+
+              <span className="ml-auto text-xl text-slate-300">
+                ›
+              </span>
+            </button>
+
+            {/* OUTBOUND */}
+            <button
+              type="button"
+              onClick={() => router.push("/outbound")}
+              className="
+                group
+                flex
+                w-full
+                items-center
+                gap-4
+                rounded-2xl
+                border
+                border-slate-200
+                bg-white
+                p-4
+                text-left
+                shadow-md
+                transition-all
+                duration-200
+                active:scale-[0.98]
+                hover:-translate-y-0.5
+                hover:shadow-lg
+              "
+            >
+              <div
+                className="
+                  flex
+                  h-14
+                  w-14
+                  shrink-0
+                  items-center
+                  justify-center
+                  rounded-xl
+                  bg-orange-100
+                  text-orange-700
+                "
+              >
+                <PackageCheck size={28} strokeWidth={1.8} />
+              </div>
+
+              <div>
+                <h2 className="text-base font-bold text-slate-800">
+                  Outbound
+                </h2>
+
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Allocation & Picking
+                </p>
+              </div>
+
+              <span className="ml-auto text-xl text-slate-300">
+                ›
+              </span>
+            </button>
+
+            {/* INVENTORY */}
+            <button
+              type="button"
+              onClick={() => router.push("/inventory")}
+              className="
+                group
+                flex
+                w-full
+                items-center
+                gap-4
+                rounded-2xl
+                border
+                border-slate-200
+                bg-white
+                p-4
+                text-left
+                shadow-md
+                transition-all
+                duration-200
+                active:scale-[0.98]
+                hover:-translate-y-0.5
+                hover:shadow-lg
+              "
+            >
+              <div
+                className="
+                  flex
+                  h-14
+                  w-14
+                  shrink-0
+                  items-center
+                  justify-center
+                  rounded-xl
+                  bg-emerald-100
+                  text-emerald-700
+                "
+              >
+                <Boxes size={28} strokeWidth={1.8} />
+              </div>
+
+              <div>
+                <h2 className="text-base font-bold text-slate-800">
+                  Inventory
+                </h2>
+
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Stock & Location
+                </p>
+              </div>
+
+              <span className="ml-auto text-xl text-slate-300">
+                ›
+              </span>
+            </button>
 
           </div>
+
+          {/* MOBILE FOOTER */}
+          <p className="mt-8 text-center text-[10px] text-slate-400">
+            ZEE-WMS Mobile
+          </p>
+
         </div>
 
       </main>
