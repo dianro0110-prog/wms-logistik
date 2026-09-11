@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -102,50 +103,98 @@ export default function PackingPage() {
       }
 
       // =====================================================
-      // HITUNG TOTAL PACKING PER SKU
+      // TOTAL PICKING PER SKU
+      //
+      // Contoh:
+      // SKU A - Location A = 5
+      // SKU A - Location B = 7
+      //
+      // Total SKU A = 12
       // =====================================================
-      const packedBySku: Record<string, number> = {};
+      const pickedBySku: Record<
+        string,
+        {
+          qty: number;
+          id: number;
+          sku: string;
+          deskripsi: string;
+          order_no: string;
+        }
+      > = {};
 
-      (packingData || []).forEach((packing: any) => {
-        const sku = String(packing.sku || "")
+      (pickingData || []).forEach((item: any) => {
+        const sku = String(item.sku || "")
           .trim()
           .toUpperCase();
 
         if (!sku) return;
 
-        packedBySku[sku] =
-          (packedBySku[sku] || 0) +
-          Number(packing.qty || 0);
-      });
+        const qtyPicked = Number(
+          item.qty_picked || 0
+        );
 
-      // =====================================================
-      // GABUNG PICKING + PACKING
-      // =====================================================
-      const result: PackingItem[] =
-        (pickingData || []).map((item: any) => {
-          const sku = String(item.sku || "")
-            .trim()
-            .toUpperCase();
-
-          const qtyPicked = Number(
-            item.qty_picked || 0
-          );
-
-          const qtyPacked =
-            packedBySku[sku] || 0;
-
-          return {
+        if (!pickedBySku[sku]) {
+          pickedBySku[sku] = {
+            qty: qtyPicked,
             id: Number(item.id),
-            order_no: item.order_no || orderNo,
             sku: item.sku || "",
             deskripsi:
               item.deskripsi ||
               item.description ||
               "",
-            qty_picked: qtyPicked,
-            qty_packed: qtyPacked,
+            order_no:
+              item.order_no || orderNo,
           };
-        });
+        } else {
+          pickedBySku[sku].qty += qtyPicked;
+        }
+      });
+
+      // =====================================================
+      // TOTAL PACKING PER SKU
+      // =====================================================
+      const packedBySku: Record<string, number> = {};
+
+      (packingData || []).forEach(
+        (packing: any) => {
+          const sku = String(packing.sku || "")
+            .trim()
+            .toUpperCase();
+
+          if (!sku) return;
+
+          packedBySku[sku] =
+            (packedBySku[sku] || 0) +
+            Number(packing.qty || 0);
+        }
+      );
+
+      // =====================================================
+      // GABUNGKAN TOTAL PICKING + PACKING
+      //
+      // Sekarang 1 SKU hanya menjadi 1 item.
+      // Tidak peduli SKU tersebut berasal dari
+      // berapa lokasi picking.
+      // =====================================================
+      const result: PackingItem[] = Object.values(
+        pickedBySku
+      ).map((item) => {
+        const sku = item.sku
+          .trim()
+          .toUpperCase();
+
+        const qtyPacked =
+          packedBySku[sku] || 0;
+
+        return {
+          id: item.id,
+          order_no: item.order_no,
+          sku: item.sku,
+          deskripsi: item.deskripsi,
+          qty_picked: item.qty,
+          qty_packed: qtyPacked,
+        };
+      });
 
       // =====================================================
       // HANYA ITEM YANG BELUM SELESAI
@@ -282,7 +331,7 @@ export default function PackingPage() {
       if (qty > qtySisa) {
         alert(
           `Qty melebihi Qty Sisa.\n\n` +
-            `Qty Picked : ${qtyPicked}\n` +
+            `Total Kebutuhan SKU : ${qtyPicked}\n` +
             `Sudah Packing : ${alreadyPacked}\n` +
             `Qty Sisa : ${qtySisa}`
         );
@@ -339,8 +388,7 @@ export default function PackingPage() {
             currentItem.deskripsi ||
             null,
 
-          qty:
-            qty,
+          qty: qty,
 
           carton:
             cartonNo.trim(),
@@ -435,9 +483,60 @@ export default function PackingPage() {
       }
 
       // =====================================================
+      // TOTAL PICKING PER SKU
+      // =====================================================
+      const pickedBySku: Record<
+        string,
+        {
+          qty: number;
+          id: number;
+          sku: string;
+          deskripsi: string;
+          order_no: string;
+        }
+      > = {};
+
+      (pickingData || []).forEach(
+        (item: any) => {
+          const sku = String(
+            item.sku || ""
+          )
+            .trim()
+            .toUpperCase();
+
+          if (!sku) return;
+
+          const qtyPicked = Number(
+            item.qty_picked || 0
+          );
+
+          if (!pickedBySku[sku]) {
+            pickedBySku[sku] = {
+              qty: qtyPicked,
+              id: Number(item.id),
+              sku: item.sku || "",
+              deskripsi:
+                item.deskripsi ||
+                item.description ||
+                "",
+              order_no:
+                item.order_no ||
+                orderNo,
+            };
+          } else {
+            pickedBySku[sku].qty +=
+              qtyPicked;
+          }
+        }
+      );
+
+      // =====================================================
       // TOTAL PACKING PER SKU
       // =====================================================
-      const packedBySku: Record<string, number> = {};
+      const packedBySku: Record<
+        string,
+        number
+      > = {};
 
       (packingData || []).forEach(
         (packing: any) => {
@@ -459,39 +558,30 @@ export default function PackingPage() {
       // GABUNGKAN
       // =====================================================
       const result: PackingItem[] =
-        (pickingData || []).map(
-          (item: any) => {
-            const sku = String(
-              item.sku || ""
-            )
-              .trim()
-              .toUpperCase();
+        Object.values(
+          pickedBySku
+        ).map((item) => {
+          const sku = item.sku
+            .trim()
+            .toUpperCase();
 
-            const qtyPicked = Number(
-              item.qty_picked || 0
-            );
+          const qtyPacked =
+            packedBySku[sku] || 0;
 
-            const qtyPacked =
-              packedBySku[sku] || 0;
-
-            return {
-              id: Number(item.id),
-              order_no:
-                item.order_no ||
-                orderNo,
-              sku:
-                item.sku || "",
-              deskripsi:
-                item.deskripsi ||
-                item.description ||
-                "",
-              qty_picked:
-                qtyPicked,
-              qty_packed:
-                qtyPacked,
-            };
-          }
-        );
+          return {
+            id: item.id,
+            order_no:
+              item.order_no,
+            sku:
+              item.sku,
+            deskripsi:
+              item.deskripsi,
+            qty_picked:
+              item.qty,
+            qty_packed:
+              qtyPacked,
+          };
+        });
 
       // =====================================================
       // ITEM YANG BELUM SELESAI
@@ -570,7 +660,7 @@ export default function PackingPage() {
       } = await supabase
         .from("picking")
         .select(
-          "sku, qty_picked"
+          "sku, qty_picked, deskripsi, description"
         )
         .eq("order_no", orderNo);
 
@@ -596,9 +686,38 @@ export default function PackingPage() {
       }
 
       // =====================================================
+      // TOTAL PICKING PER SKU
+      // =====================================================
+      const pickedBySku: Record<
+        string,
+        number
+      > = {};
+
+      (pickingData || []).forEach(
+        (item: any) => {
+          const sku = String(
+            item.sku || ""
+          )
+            .trim()
+            .toUpperCase();
+
+          if (!sku) return;
+
+          pickedBySku[sku] =
+            (pickedBySku[sku] || 0) +
+            Number(
+              item.qty_picked || 0
+            );
+        }
+      );
+
+      // =====================================================
       // TOTAL PACKING PER SKU
       // =====================================================
-      const packedBySku: Record<string, number> = {};
+      const packedBySku: Record<
+        string,
+        number
+      > = {};
 
       (packedData || []).forEach(
         (item: any) => {
@@ -617,23 +736,15 @@ export default function PackingPage() {
       );
 
       // =====================================================
-      // CEK SEMUA ITEM
+      // CEK SEMUA SKU
       // =====================================================
       const belumSelesai: string[] =
         [];
 
-      (pickingData || []).forEach(
-        (item: any) => {
-          const sku = String(
-            item.sku || ""
-          )
-            .trim()
-            .toUpperCase();
-
-          const qtyPicked = Number(
-            item.qty_picked || 0
-          );
-
+      Object.entries(
+        pickedBySku
+      ).forEach(
+        ([sku, qtyPicked]) => {
           const qtyPacked =
             packedBySku[sku] || 0;
 
@@ -674,7 +785,10 @@ export default function PackingPage() {
         .update({
           status: "PACKED",
         })
-        .eq("order_no", orderNo);
+        .eq(
+          "order_no",
+          orderNo
+        );
 
       if (updateError) {
         alert(updateError.message);
@@ -866,10 +980,10 @@ export default function PackingPage() {
                       </div>
                     </div>
 
-                    {/* QTY DIBUTUHKAN */}
+                    {/* TOTAL KEBUTUHAN SKU */}
                     <div>
                       <label className="block text-sm font-medium text-gray-500 mb-1">
-                        Quantity Dibutuhkan
+                        Total Kebutuhan SKU
                       </label>
 
                       <div className="text-lg font-bold">
@@ -941,11 +1055,11 @@ export default function PackingPage() {
           </div>
 
           {/* =================================================
-              QUANTITY DIBUTUHKAN
+              TOTAL KEBUTUHAN SKU
           ================================================= */}
           <div className="mb-4">
             <label className="block mb-2 font-semibold">
-              Quantity Dibutuhkan
+              Total Kebutuhan SKU
             </label>
 
             <input
@@ -956,7 +1070,7 @@ export default function PackingPage() {
               }
               readOnly
               className="border rounded p-2 w-full bg-gray-100"
-              placeholder="Quantity otomatis berdasarkan SKU"
+              placeholder="Total kebutuhan otomatis berdasarkan SKU"
             />
           </div>
 
@@ -1012,7 +1126,9 @@ export default function PackingPage() {
                 Qty maksimal yang dapat
                 dipacking:{" "}
                 <span className="font-bold">
-                  {displayQtySisa}
+                  {
+                    displayQtySisa
+                  }
                 </span>
               </p>
             )}

@@ -340,6 +340,19 @@ const handleLogout = async () => {
       Packing
     </Link>
 
+    <Link
+      href="/outbound/handling-unit"
+      className="block px-3 py-2 hover:bg-slate-800 rounded"
+    >
+      Handling Unit
+    </Link>
+
+    <Link
+      href="/outbound/surat-jalan"
+      className="block px-3 py-2 hover:bg-slate-800 rounded"
+    >
+      Surat Jalan
+    </Link>
     
   </div>
 )}
