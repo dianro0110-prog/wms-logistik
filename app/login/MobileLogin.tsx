@@ -7,6 +7,7 @@ import {
   EyeOff,
   LogIn,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface MobileLoginProps {
   name: string;
@@ -35,6 +36,22 @@ export default function MobileLogin({
   error,
   handleLogin,
 }: MobileLoginProps) {
+  const router = useRouter();
+
+  // HANDLE LOGIN MOBILE
+  const handleMobileLogin = async (
+    e: React.FormEvent<HTMLFormElement>
+  ) => {
+    e.preventDefault();
+
+    // Jalankan proses login dari parent
+    await handleLogin(e);
+
+    // Setelah proses login selesai,
+    // arahkan ke menu system
+    router.push("/system");
+  };
+
   return (
     <div
       style={{
@@ -81,7 +98,6 @@ export default function MobileLogin({
         </div>
 
         {/* TITLE */}
-
         <h2
           style={{
             textAlign: "center",
@@ -104,7 +120,6 @@ export default function MobileLogin({
         </p>
 
         {/* ERROR */}
-
         {error && (
           <div
             style={{
@@ -122,10 +137,8 @@ export default function MobileLogin({
         )}
 
         {/* FORM */}
-
-        <form onSubmit={handleLogin}>
+        <form onSubmit={handleMobileLogin}>
           {/* USERNAME */}
-
           <div style={{ marginBottom: 20 }}>
             <label
               style={{
@@ -156,7 +169,6 @@ export default function MobileLogin({
           </div>
 
           {/* PASSWORD */}
-
           <div style={{ marginBottom: 25 }}>
             <label
               style={{
@@ -193,7 +205,9 @@ export default function MobileLogin({
 
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
+                onClick={() =>
+                  setShowPassword(!showPassword)
+                }
                 style={{
                   position: "absolute",
                   right: 15,
@@ -214,7 +228,6 @@ export default function MobileLogin({
           </div>
 
           {/* LOGIN */}
-
           <button
             type="submit"
             disabled={loading}
@@ -232,6 +245,7 @@ export default function MobileLogin({
               justifyContent: "center",
               alignItems: "center",
               gap: 10,
+              opacity: loading ? 0.7 : 1,
             }}
           >
             {loading ? "Loading..." : "Masuk"}
@@ -241,7 +255,6 @@ export default function MobileLogin({
         </form>
 
         {/* FOOTER */}
-
         <div
           style={{
             marginTop: 30,
