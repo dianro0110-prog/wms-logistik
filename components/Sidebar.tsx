@@ -479,6 +479,18 @@ const handleLogout = async () => {
   </div>
 )}
 
+     {/* INVOICE */}
+      <Link
+  href="/invoice"
+  title={collapsed ? "Invoice" : ""}
+  className={`flex items-center rounded hover:bg-slate-800 ${
+    collapsed ? "justify-center px-2" : "gap-3 px-3"
+  } py-2`}
+>
+  <Building2 size={18} />
+  {!collapsed && "Invoice"}
+</Link>
+
  
   
 

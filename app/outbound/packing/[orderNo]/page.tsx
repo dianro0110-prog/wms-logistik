@@ -660,7 +660,7 @@ export default function PackingPage() {
       } = await supabase
         .from("picking")
         .select(
-          "sku, qty_picked, deskripsi, description"
+          "sku, qty_picked, deskripsi"
         )
         .eq("order_no", orderNo);
 
