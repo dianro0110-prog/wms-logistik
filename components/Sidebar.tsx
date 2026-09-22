@@ -73,7 +73,7 @@ const handleLogout = async () => {
 
   return (
     <aside
-  className={`min-h-screen bg-slate-900 text-white transition-all duration-300 flex flex-col ${
+  className={`min-h-screen bg-transparent text-slate-900 transition-all duration-300 flex flex-col ${
     collapsed ? "w-20" : "w-64"
   }`}
 >
@@ -102,7 +102,7 @@ const handleLogout = async () => {
      <button
   onClick={() => !collapsed && setOpenMaster(!openMaster)}
   title={collapsed ? "Master Data" : ""}
-  className={`w-full flex items-center rounded hover:bg-slate-800 py-2 ${
+  className={`w-full flex items-center rounded hover:bg-slate-300 py-2 ${
     collapsed
       ? "justify-center px-2"
       : "justify-between px-3"
@@ -129,21 +129,21 @@ const handleLogout = async () => {
   <div className="ml-6 space-y-1">
     <Link
       href="/products"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
+      className="block px-3 py-2 hover:bg-slate-300 rounded"
     >
       Products
     </Link>
 
     <Link
       href="/location"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
+      className="block px-3 py-2 hover:bg-slate-300 rounded"
     >
       Location
     </Link>
 
     <Link
       href="/categories"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
+      className="block px-3 py-2 hover:bg-slate-300 rounded"
     >
       Category
     </Link>
@@ -154,7 +154,7 @@ const handleLogout = async () => {
       <Link
   href="/suppliers"
   title={collapsed ? "Supplier" : ""}
-  className={`flex items-center rounded hover:bg-slate-800 ${
+  className={`flex items-center rounded hover:bg-slate-300 ${
     collapsed ? "justify-center px-2" : "gap-3 px-3"
   } py-2`}
 >
@@ -166,7 +166,7 @@ const handleLogout = async () => {
       <Link
   href="/warehouse"
   title={collapsed ? "Supplier" : ""}
-  className={`flex items-center rounded hover:bg-slate-800 ${
+  className={`flex items-center rounded hover:bg-slate-300 ${
     collapsed ? "justify-center px-2" : "gap-3 px-3"
   } py-2`}
 >
@@ -178,7 +178,7 @@ const handleLogout = async () => {
       <button
   onClick={() => !collapsed && setOpenInbound(!openInbound)}
   title={collapsed ? "Inbound" : ""}
-  className={`w-full flex items-center rounded hover:bg-slate-800 py-2 ${
+  className={`w-full flex items-center rounded hover:bg-slate-300 py-2 ${
     collapsed
       ? "justify-center px-2"
       : "justify-between px-3"
@@ -205,14 +205,14 @@ const handleLogout = async () => {
   <div className="ml-6 space-y-1">
     <Link
       href="/inbound/receiving"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
+      className="block px-3 py-2 hover:bg-slate-300 rounded"
     >
       Receiving
     </Link>
 
     <Link
       href="/inbound/checking"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
+      className="block px-3 py-2 hover:bg-slate-300 rounded"
     >
       Checking
     </Link>
@@ -221,7 +221,7 @@ const handleLogout = async () => {
 
     <Link
       href="/inbound/putaway"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
+      className="block px-3 py-2 hover:bg-slate-300 rounded"
     >
       Putaway
     </Link>
@@ -234,7 +234,7 @@ const handleLogout = async () => {
       <button
   onClick={() => !collapsed && setOpenInventory(!openInventory)}
   title={collapsed ? "Inventory" : ""}
-  className={`w-full flex items-center rounded hover:bg-slate-800 py-2 ${
+  className={`w-full flex items-center rounded hover:bg-slate-300 py-2 ${
     collapsed
       ? "justify-center px-2"
       : "justify-between px-3"
@@ -261,21 +261,21 @@ const handleLogout = async () => {
   <div className="ml-6 space-y-1">
     <Link
       href="/inventory/inventory_list"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
+      className="block px-3 py-2 hover:bg-slate-300 rounded"
     >
       Inventory List
     </Link>
 
     <Link
       href="/inventory/movement"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
+      className="block px-3 py-2 hover:bg-slate-300 rounded"
     >
       Movement
     </Link>
 
     <Link
       href="/inventory/movement_list"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
+      className="block px-3 py-2 hover:bg-slate-300 rounded"
     >
       Movement List
     </Link>
@@ -286,7 +286,7 @@ const handleLogout = async () => {
       <button
   onClick={() => !collapsed && setOpenOutbound(!openOutbound)}
   title={collapsed ? "Outbound" : ""}
-  className={`w-full flex items-center rounded hover:bg-slate-800 py-2 ${
+  className={`w-full flex items-center rounded hover:bg-slate-300 py-2 ${
     collapsed
       ? "justify-center px-2"
       : "justify-between px-3"
@@ -313,21 +313,21 @@ const handleLogout = async () => {
   <div className="ml-6 space-y-1">
     <Link
       href="/outbound/upload"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
+      className="block px-3 py-2 hover:bg-slate-300 rounded"
     >
       Upload Orders
     </Link>
 
     <Link
       href="/outbound/orders"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
+      className="block px-3 py-2 hover:bg-slate-300 rounded"
     >
       Order List
     </Link>
 
     <Link
       href="/outbound/picking"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
+      className="block px-3 py-2 hover:bg-slate-300 rounded"
     >
       Picking
     </Link>
@@ -335,21 +335,21 @@ const handleLogout = async () => {
     
     <Link
       href="/outbound/packing"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
+      className="block px-3 py-2 hover:bg-slate-300 rounded"
     >
       Packing
     </Link>
 
     <Link
       href="/outbound/handling-unit"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
+      className="block px-3 py-2 hover:bg-slate-300 rounded"
     >
       Handling Unit
     </Link>
 
     <Link
       href="/outbound/surat-jalan"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
+      className="block px-3 py-2 hover:bg-slate-300 rounded"
     >
       Surat Jalan
     </Link>
@@ -361,7 +361,7 @@ const handleLogout = async () => {
 <button
   onClick={() => !collapsed && setOpenshipment(!openshipment)}
   title={collapsed ? "Shipment" : ""}
-  className={`w-full flex items-center rounded hover:bg-slate-800 py-2 ${
+  className={`w-full flex items-center rounded hover:bg-slate-300 py-2 ${
     collapsed
       ? "justify-center px-2"
       : "justify-between px-3"
@@ -388,28 +388,28 @@ const handleLogout = async () => {
   <div className="ml-6 space-y-1">
     <Link
       href="/shipment/online"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
+      className="block px-3 py-2 hover:bg-slate-300 rounded"
     >
       Shipment B2C
     </Link>
 
     <Link
       href="/shipment/online-report"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
+      className="block px-3 py-2 hover:bg-slate-300 rounded"
     >
       B2C Report
     </Link>
 
     <Link
       href="/shipment/offline"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
+      className="block px-3 py-2 hover:bg-slate-300 rounded"
     >
       Shipment B2B
     </Link>
 
     <Link
       href="/shipment/offline-report"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
+      className="block px-3 py-2 hover:bg-slate-300 rounded"
     >
       B2B Report
     </Link>
@@ -424,7 +424,7 @@ const handleLogout = async () => {
 <button
   onClick={() => !collapsed && setOpenreports(!openreports)}
   title={collapsed ? "reports" : ""}
-  className={`w-full flex items-center rounded hover:bg-slate-800 py-2 ${
+  className={`w-full flex items-center rounded hover:bg-slate-300 py-2 ${
     collapsed
       ? "justify-center px-2"
       : "justify-between px-3"
@@ -451,39 +451,53 @@ const handleLogout = async () => {
   <div className="ml-6 space-y-1">
     <Link
       href="/reports/checking-report"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
+      className="block px-3 py-2 hover:bg-slate-300 rounded"
     >
       Checking Report
     </Link>
 
     <Link
       href="/reports/putaway-report"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
+      className="block px-3 py-2 hover:bg-slate-300 rounded"
     >
       Putaway Report
     </Link>
 
     <Link
       href="/reports/picking-report"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
+      className="block px-3 py-2 hover:bg-slate-300 rounded"
     >
       Picking Report
     </Link>
 
     <Link
       href="/reports/packing-report"
-      className="block px-3 py-2 hover:bg-slate-800 rounded"
+      className="block px-3 py-2 hover:bg-slate-300 rounded"
     >
       Packing Report
     </Link>
   </div>
 )}
 
+
+{/* COUNTING */}
+      <Link
+  href="counting"
+  title={collapsed ? "counting" : ""}
+  className={`flex items-center rounded hover:bg-slate-300 ${
+    collapsed ? "justify-center px-2" : "gap-3 px-3"
+  } py-2`}
+>
+  <Building2 size={18} />
+  {!collapsed && "Counting"}
+</Link>
+
+
      {/* INVOICE */}
       <Link
   href="/invoice"
   title={collapsed ? "Invoice" : ""}
-  className={`flex items-center rounded hover:bg-slate-800 ${
+  className={`flex items-center rounded hover:bg-slate-300 ${
     collapsed ? "justify-center px-2" : "gap-3 px-3"
   } py-2`}
 >

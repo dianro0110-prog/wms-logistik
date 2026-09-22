@@ -10,6 +10,7 @@ import {
   PackageCheck,
   Boxes,
   ClipboardCheck,
+  ClipboardList,
   PackageOpen,
   ScanLine,
   Box,
@@ -25,7 +26,7 @@ export default function SystemPage() {
   const router = useRouter();
 
   const [mobileMenu, setMobileMenu] = useState<
-    "main" | "inbound" | "outbound" | "inventory"
+    "main" | "inbound" | "outbound" | "inventory" | "counting"
   >("main");
 
   const [userName, setUserName] = useState<string>("User");
@@ -129,92 +130,6 @@ export default function SystemPage() {
             backgroundSize: "40px 40px",
           }}
         />
-
-        {/* ================================================== */}
-        {/* ============== USER DESKTOP ====================== */}
-        {/* ================================================== */}
-
-        {/* 
-          User + Logout DESKTOP
-          Tetap tampil di desktop.
-        */}
-
-        <div
-          className="
-            absolute
-            right-4
-            top-4
-            z-50
-            hidden
-            items-center
-            gap-2
-            md:flex
-          "
-        >
-          {/* USER NAME */}
-          <div
-            className="
-              flex
-              items-center
-              gap-2
-              rounded-xl
-              border
-              border-slate-200
-              bg-white
-              px-3
-              py-2
-              shadow-sm
-            "
-          >
-            <UserCircle
-              size={25}
-              strokeWidth={1.7}
-              className="text-blue-950"
-            />
-
-            <div>
-              <p className="text-[9px] font-medium uppercase tracking-wider text-slate-400">
-                User
-              </p>
-
-              <p className="max-w-[180px] truncate text-xs font-bold text-slate-700">
-                {userName}
-              </p>
-            </div>
-          </div>
-
-          {/* LOGOUT DESKTOP */}
-          <button
-            type="button"
-            onClick={handleLogout}
-            title="Logout"
-            className="
-              flex
-              h-10
-              w-10
-              items-center
-              justify-center
-              rounded-xl
-              border
-              border-red-100
-              bg-white
-              text-red-500
-              shadow-sm
-              transition-all
-              duration-200
-              hover:border-red-200
-              hover:bg-red-50
-              hover:text-red-600
-              hover:shadow-md
-              active:scale-95
-            "
-          >
-            <LogOut
-              size={19}
-              strokeWidth={1.8}
-            />
-          </button>
-        </div>
 
         {/* ================================================== */}
         {/* ================= BACK BUTTON ==================== */}
@@ -329,7 +244,7 @@ export default function SystemPage() {
                 md:text-5xl
               "
             >
-              ZEE-WMS
+              Zee-WMS
             </h1>
 
             {/* SUBTITLE */}
@@ -391,6 +306,7 @@ export default function SystemPage() {
                   gap-1.5
                 "
               >
+
                 {/* USER NAME */}
 
                 <div
@@ -577,6 +493,7 @@ export default function SystemPage() {
                   </span>
                 </button>
 
+
                 {/* OUTBOUND */}
 
                 <button
@@ -635,6 +552,7 @@ export default function SystemPage() {
                     ›
                   </span>
                 </button>
+
 
                 {/* INVENTORY */}
 
@@ -695,6 +613,68 @@ export default function SystemPage() {
                   </span>
                 </button>
 
+
+                {/* ================================================== */}
+                {/* ================= COUNTING ======================= */}
+                {/* ================================================== */}
+
+                <button
+                  type="button"
+                  onClick={() => setMobileMenu("counting")}
+                  className="
+                    group
+                    flex
+                    w-full
+                    items-center
+                    gap-4
+                    rounded-2xl
+                    border
+                    border-slate-200
+                    bg-white
+                    p-4
+                    text-left
+                    shadow-md
+                    transition-all
+                    duration-200
+                    active:scale-[0.98]
+                    hover:-translate-y-0.5
+                    hover:shadow-lg
+                  "
+                >
+                  <div
+                    className="
+                      flex
+                      h-14
+                      w-14
+                      shrink-0
+                      items-center
+                      justify-center
+                      rounded-xl
+                      bg-purple-100
+                      text-purple-700
+                    "
+                  >
+                    <ClipboardList
+                      size={28}
+                      strokeWidth={1.8}
+                    />
+                  </div>
+
+                  <div>
+                    <h2 className="text-base font-bold text-slate-800">
+                      Counting
+                    </h2>
+
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      Stock Opname & Counting
+                    </p>
+                  </div>
+
+                  <span className="ml-auto text-xl text-slate-300">
+                    ›
+                  </span>
+                </button>
+
               </div>
 
               {/* MOBILE FOOTER */}
@@ -704,6 +684,7 @@ export default function SystemPage() {
               </p>
             </>
           )}
+
 
           {/* ================================================== */}
           {/* ================= INBOUND MOBILE ================= */}
@@ -751,7 +732,9 @@ export default function SystemPage() {
 
                 <button
                   type="button"
-                  onClick={() => router.push("/inbound/checking")}
+                  onClick={() =>
+                    router.push("/inbound/checking")
+                  }
                   className="
                     flex
                     w-full
@@ -803,11 +786,14 @@ export default function SystemPage() {
                   </span>
                 </button>
 
+
                 {/* PUTAWAY */}
 
                 <button
                   type="button"
-                  onClick={() => router.push("/inbound/putaway")}
+                  onClick={() =>
+                    router.push("/inbound/putaway")
+                  }
                   className="
                     flex
                     w-full
@@ -865,7 +851,9 @@ export default function SystemPage() {
 
               <button
                 type="button"
-                onClick={() => setMobileMenu("main")}
+                onClick={() =>
+                  setMobileMenu("main")
+                }
                 className="
                   mx-auto
                   mt-7
@@ -888,6 +876,7 @@ export default function SystemPage() {
               </button>
             </>
           )}
+
 
           {/* ================================================== */}
           {/* ================= OUTBOUND MOBILE ================ */}
@@ -935,7 +924,9 @@ export default function SystemPage() {
 
                 <button
                   type="button"
-                  onClick={() => router.push("/outbound/picking")}
+                  onClick={() =>
+                    router.push("/outbound/picking")
+                  }
                   className="
                     flex
                     w-full
@@ -987,11 +978,14 @@ export default function SystemPage() {
                   </span>
                 </button>
 
+
                 {/* PACKING */}
 
                 <button
                   type="button"
-                  onClick={() => router.push("/outbound/packing")}
+                  onClick={() =>
+                    router.push("/outbound/packing")
+                  }
                   className="
                     flex
                     w-full
@@ -1049,7 +1043,9 @@ export default function SystemPage() {
 
               <button
                 type="button"
-                onClick={() => setMobileMenu("main")}
+                onClick={() =>
+                  setMobileMenu("main")
+                }
                 className="
                   mx-auto
                   mt-7
@@ -1072,6 +1068,7 @@ export default function SystemPage() {
               </button>
             </>
           )}
+
 
           {/* ================================================== */}
           {/* ================= INVENTORY MOBILE =============== */}
@@ -1119,7 +1116,9 @@ export default function SystemPage() {
 
                 <button
                   type="button"
-                  onClick={() => router.push("/inventory/movement")}
+                  onClick={() =>
+                    router.push("/inventory/movement")
+                  }
                   className="
                     flex
                     w-full
@@ -1177,7 +1176,9 @@ export default function SystemPage() {
 
               <button
                 type="button"
-                onClick={() => setMobileMenu("main")}
+                onClick={() =>
+                  setMobileMenu("main")
+                }
                 className="
                   mx-auto
                   mt-7
@@ -1198,6 +1199,142 @@ export default function SystemPage() {
                 <ArrowLeft size={17} />
                 Kembali ke Menu
               </button>
+            </>
+          )}
+
+
+          {/* ================================================== */}
+          {/* ================= COUNTING MOBILE ================ */}
+          {/* ================================================== */}
+
+          {mobileMenu === "counting" && (
+            <>
+              <div className="mb-7 text-center">
+
+                <div
+                  className="
+                    mx-auto
+                    flex
+                    h-16
+                    w-16
+                    items-center
+                    justify-center
+                    rounded-2xl
+                    bg-purple-600
+                    text-white
+                    shadow-lg
+                    ring-4
+                    ring-purple-100
+                  "
+                >
+                  <ClipboardList
+                    size={34}
+                    strokeWidth={1.7}
+                  />
+                </div>
+
+                <h1 className="mt-4 text-2xl font-extrabold text-purple-700">
+                  Counting
+                </h1>
+
+                <p className="mt-1 text-xs text-slate-500">
+                  Stock Opname & Counting
+                </p>
+
+              </div>
+
+
+              <div className="mx-auto w-full max-w-sm space-y-4">
+
+                {/* COUNTING */}
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push("/counting")
+                  }
+                  className="
+                    flex
+                    w-full
+                    items-center
+                    gap-4
+                    rounded-2xl
+                    border
+                    border-slate-200
+                    bg-white
+                    p-4
+                    text-left
+                    shadow-md
+                    transition-all
+                    active:scale-[0.98]
+                    hover:shadow-lg
+                  "
+                >
+                  <div
+                    className="
+                      flex
+                      h-14
+                      w-14
+                      shrink-0
+                      items-center
+                      justify-center
+                      rounded-xl
+                      bg-purple-100
+                      text-purple-700
+                    "
+                  >
+                    <ClipboardList
+                      size={28}
+                      strokeWidth={1.8}
+                    />
+                  </div>
+
+                  <div>
+                    <h2 className="text-base font-bold text-slate-800">
+                      Stock Counting
+                    </h2>
+
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      First, Second & Third Count
+                    </p>
+                  </div>
+
+                  <span className="ml-auto text-xl text-slate-300">
+                    ›
+                  </span>
+                </button>
+
+              </div>
+
+
+              {/* BACK */}
+
+              <button
+                type="button"
+                onClick={() =>
+                  setMobileMenu("main")
+                }
+                className="
+                  mx-auto
+                  mt-7
+                  flex
+                  items-center
+                  gap-2
+                  rounded-xl
+                  px-4
+                  py-2
+                  text-sm
+                  font-medium
+                  text-slate-500
+                  transition
+                  hover:bg-slate-200
+                  hover:text-slate-800
+                "
+              >
+                <ArrowLeft size={17} />
+                Kembali ke Menu
+              </button>
+
             </>
           )}
 

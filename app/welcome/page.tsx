@@ -164,11 +164,11 @@ export default function WelcomePage() {
                   text-blue-200
                 "
               >
-                ZEE-WMS
+                Zee-WMS
               </p>
 
               <p className="text-sm text-white/70">
-                Warehouse Management System
+                
               </p>
 
             </div>

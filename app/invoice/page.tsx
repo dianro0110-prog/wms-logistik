@@ -1041,12 +1041,12 @@ export default function InvoicePage() {
             <div>
 
               <div class="company">
-                Z WAREHOUSE
+                CV. MAF Fashion 
               </div>
 
               <div class="company-detail">
-                Warehouse Management System<br />
-                Invoice Penjualan
+                Jl Raya Katapang no 13<br />
+                No Telp : +628994376079
               </div>
 
             </div>
