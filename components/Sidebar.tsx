@@ -1,4 +1,4 @@
-"use client";
+
 
 "use client";
 
@@ -30,6 +30,7 @@ export default function Sidebar() {
   const [openOutbound, setOpenOutbound] = useState(false);
   const [openshipment, setOpenshipment] = useState(false);
 const [openreports, setOpenreports] = useState(false);
+const [opencounting, setOpencounting] = useState(false);
   const router = useRouter();
 
 const [userName, setUserName] = useState("Loading...");
@@ -480,18 +481,66 @@ const handleLogout = async () => {
 )}
 
 
-{/* COUNTING */}
-      <Link
-  href="counting"
-  title={collapsed ? "counting" : ""}
-  className={`flex items-center rounded hover:bg-slate-300 ${
-    collapsed ? "justify-center px-2" : "gap-3 px-3"
-  } py-2`}
->
-  <Building2 size={18} />
-  {!collapsed && "Counting"}
-</Link>
 
+      {/* COUNTING */}
+
+<button
+  onClick={() => !collapsed && setOpencounting(!opencounting)}
+  title={collapsed ? "counting" : ""}
+  className={`w-full flex items-center rounded hover:bg-slate-300 py-2 ${
+    collapsed
+      ? "justify-center px-2"
+      : "justify-between px-3"
+  }`}
+>
+  <div
+    className={`flex items-center ${
+      collapsed ? "" : "gap-3"
+    }`}
+  >
+    <ArrowUpCircle size={18} />
+
+    {!collapsed && "Counting"}
+  </div>
+
+  {!collapsed && (
+    <span>
+      {opencounting ? "▲" : "▼"}
+    </span>
+  )}
+</button>
+
+{opencounting && !collapsed && (
+  <div className="ml-6 space-y-1">
+    <Link
+      href="/counting/firstcount"
+      className="block px-3 py-2 hover:bg-slate-300 rounded"
+    >
+     First Count
+    </Link>
+
+    <Link
+      href="/counting/secondcount"
+      className="block px-3 py-2 hover:bg-slate-300 rounded"
+    >
+      Second Count
+    </Link>
+
+    <Link
+      href="/counting/thirdcount"
+      className="block px-3 py-2 hover:bg-slate-300 rounded"
+    >
+      Third Count
+    </Link>
+
+    <Link
+      href="/counting/countingreports"
+      className="block px-3 py-2 hover:bg-slate-300 rounded"
+    >
+      Counting Report
+    </Link>
+  </div>
+)}
 
      {/* INVOICE */}
       <Link
