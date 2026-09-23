@@ -1,8 +1,8 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+
 import {
   Warehouse,
   ArrowLeftCircle,
@@ -18,28 +18,46 @@ import {
   MoveRight,
   UserCircle,
   LogOut,
+  ChevronRight,
 } from "lucide-react";
+
 import Sidebar from "../../components/Sidebar";
 import { supabase } from "../../lib/supabase";
+
+// =========================================================
+// TYPE
+// =========================================================
+
+type MobileMenu =
+  | "main"
+  | "inbound"
+  | "outbound"
+  | "inventory"
+  | "counting";
+
+// =========================================================
+// PAGE
+// =========================================================
 
 export default function SystemPage() {
   const router = useRouter();
 
-  const [mobileMenu, setMobileMenu] = useState<
-    "main" | "inbound" | "outbound" | "inventory" | "counting"
-  >("main");
+  const [mobileMenu, setMobileMenu] = useState<MobileMenu>("main");
+  const [userName, setUserName] = useState("User");
 
-  const [userName, setUserName] = useState<string>("User");
-
-  /* ====================================================== */
-  /* ================= GET LOGIN USER ===================== */
-  /* ====================================================== */
+  // =======================================================
+  // GET USER
+  // =======================================================
 
   useEffect(() => {
-    const getUser = async () => {
+    let mounted = true;
+
+    const loadUser = async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
+
+      if (!mounted) return;
 
       if (user) {
         const name =
@@ -52,16 +70,20 @@ export default function SystemPage() {
       }
     };
 
-    getUser();
+    loadUser();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+
       if (session?.user) {
+        const user = session.user;
+
         const name =
-          session.user.user_metadata?.full_name ||
-          session.user.user_metadata?.name ||
-          session.user.email?.split("@")[0] ||
+          user.user_metadata?.full_name ||
+          user.user_metadata?.name ||
+          user.email?.split("@")[0] ||
           "User";
 
         setUserName(name);
@@ -71,428 +93,307 @@ export default function SystemPage() {
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
-  /* ====================================================== */
-  /* ======================= LOGOUT ======================= */
-  /* ====================================================== */
+  // =======================================================
+  // LOGOUT
+  // =======================================================
 
   const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-      console.error("Logout error:", error);
-      return;
-    }
-
+    await supabase.auth.signOut();
     router.push("/login");
   };
 
+  // =======================================================
+  // MOBILE NAVIGATION
+  // =======================================================
+
+  const goTo = (path: string) => {
+    router.push(path);
+  };
+
+  const backToMain = () => {
+    setMobileMenu("main");
+  };
+
+  // =======================================================
+  // RENDER
+  // =======================================================
+
   return (
-    <div className="flex min-h-screen bg-slate-100">
+    <div className="min-h-screen bg-slate-100">
+      {/* ===================================================
+          DESKTOP SIDEBAR
+      =================================================== */}
 
-      {/* ================================================== */}
-      {/* ===================== SIDEBAR ==================== */}
-      {/* ================================================== */}
-
-      {/* Hanya tampil di WEB / DESKTOP */}
       <div className="hidden md:block">
         <Sidebar />
       </div>
 
-      {/* ================================================== */}
-      {/* ================= MAIN CONTENT =================== */}
-      {/* ================================================== */}
+      {/* ===================================================
+          DESKTOP CONTENT
+      =================================================== */}
 
-      <main className="relative flex-1 overflow-hidden p-3 sm:p-5 md:p-6">
+      <main className="hidden min-h-screen md:ml-64 md:block">
+        <div className="relative flex min-h-screen items-center justify-center px-8">
+          {/* BACK BUTTON */}
 
-        {/* ================================================== */}
-        {/* ================= BACKGROUND GRID ================= */}
-        {/* ================================================== */}
-
-        <div
-          className="pointer-events-none absolute inset-0 opacity-60"
-          style={{
-            backgroundColor: "#f8fafc",
-            backgroundImage: `
-              linear-gradient(
-                rgba(15, 23, 42, 0.06) 1px,
-                transparent 1px
-              ),
-              linear-gradient(
-                90deg,
-                rgba(15, 23, 42, 0.06) 1px,
-                transparent 1px
-              )
-            `,
-            backgroundSize: "40px 40px",
-          }}
-        />
-
-        {/* ================================================== */}
-        {/* ================= BACK BUTTON ==================== */}
-        {/* ================================================== */}
-
-        {/* Hanya tampil di DESKTOP */}
-
-        <button
-          type="button"
-          onClick={() => router.push("/welcome")}
-          className="
-            relative
-            z-20
-            group
-            mb-4
-            hidden
-            items-center
-            gap-1.5
-            rounded-lg
-            border
-            border-slate-200
-            bg-gray-600
-            px-3
-            py-2
-            text-sm
-            font-medium
-            text-white
-            shadow-sm
-            transition-all
-            duration-200
-            hover:bg-slate-50
-            hover:text-slate-700
-            hover:shadow-md
-            sm:mb-5
-            sm:gap-2
-            sm:rounded-xl
-            sm:px-4
-            sm:py-2.5
-            sm:text-base
-            md:flex
-          "
-        >
-          <ArrowLeftCircle
-            size={17}
+          <button
+            type="button"
+            onClick={() => router.push("/welcome")}
             className="
-              transition-transform
-              duration-200
-              group-hover:-translate-x-1
-              sm:h-[19px]
-              sm:w-[19px]
+              absolute
+              left-8
+              top-8
+              flex
+              items-center
+              gap-2
+              rounded-xl
+              border
+              border-slate-200
+              bg-white
+              px-4
+              py-3
+              text-sm
+              font-semibold
+              text-slate-700
+              shadow-sm
+              transition
+              hover:bg-slate-50
             "
-          />
+          >
+            <ArrowLeftCircle size={20} />
+            Kembali
+          </button>
 
-          <span>Kembali</span>
-        </button>
+          {/* LOGO / TITLE */}
 
-        {/* ====================================================== */}
-        {/* ================= DESKTOP VERSION ==================== */}
-        {/* ====================================================== */}
-
-        <div
-          className="
-            pointer-events-none
-            absolute
-            inset-0
-            hidden
-            items-center
-            justify-center
-            px-5
-            md:flex
-          "
-        >
-          <div className="flex w-full max-w-md flex-col items-center justify-center">
-
-            {/* LOGO */}
+          <div className="text-center">
             <div
               className="
+                mx-auto
+                mb-6
                 flex
-                h-20
-                w-20
+                h-24
+                w-24
                 items-center
                 justify-center
-                rounded-2xl
-                bg-blue-950
+                rounded-3xl
+                bg-slate-900
+                text-white
                 shadow-xl
-                ring-6
-                ring-blue-100
-                sm:h-24
-                sm:w-24
-                sm:rounded-3xl
-                sm:ring-8
               "
             >
-              <Warehouse
-                size={44}
-                strokeWidth={1.7}
-                className="text-white sm:h-[54px] sm:w-[54px]"
-              />
+              <Warehouse size={48} strokeWidth={1.8} />
             </div>
 
-            {/* ZEE-WMS */}
-            <h1
-              className="
-                mt-5
-                text-3xl
-                font-extrabold
-                tracking-[0.16em]
-                text-blue-950
-                sm:mt-6
-                sm:text-4xl
-                sm:tracking-[0.22em]
-                md:text-5xl
-              "
-            >
+            <h1 className="text-4xl font-bold tracking-tight text-slate-900">
               Zee-WMS
             </h1>
 
-            {/* SUBTITLE */}
-            <p
-              className="
-                mt-2
-                text-center
-                text-[9px]
-                font-medium
-                uppercase
-                tracking-[0.18em]
-                text-slate-500
-                sm:text-xs
-                sm:tracking-[0.28em]
-                md:text-sm
-              "
-            >
+            <p className="mt-2 text-lg font-medium text-slate-500">
               Warehouse Management System
             </p>
 
+            <p className="mt-1 text-sm text-slate-400">
+              Silakan pilih menu melalui sidebar
+            </p>
           </div>
         </div>
+      </main>
 
-        {/* ====================================================== */}
-        {/* ================= MOBILE VERSION ===================== */}
-        {/* ====================================================== */}
+      {/* ===================================================
+          MOBILE
+      =================================================== */}
 
-        <div
-          className="
-            relative
-            z-10
-            flex
-            min-h-[calc(100vh-40px)]
-            flex-col
-            justify-center
-            px-2
-            md:hidden
-          "
-        >
+      <main className="min-h-screen bg-slate-100 md:hidden">
+        <div className="px-4 pb-8 pt-6">
+          {/* =================================================
+              MOBILE HEADER
+          ================================================= */}
 
-          {/* ================================================== */}
-          {/* ================= MAIN MOBILE ==================== */}
-          {/* ================================================== */}
+          <div className="mb-6 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div
+                className="
+                  flex
+                  h-12
+                  w-12
+                  items-center
+                  justify-center
+                  rounded-2xl
+                  bg-slate-900
+                  text-white
+                  shadow-md
+                "
+              >
+                <Warehouse size={25} />
+              </div>
+
+              <div>
+                <h1 className="text-xl font-bold text-slate-900">
+                  Zee-WMS
+                </h1>
+
+                <p className="text-xs text-slate-500">
+                  Warehouse Management
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => router.push("/welcome")}
+              className="
+                flex
+                h-10
+                w-10
+                items-center
+                justify-center
+                rounded-xl
+                bg-white
+                text-slate-600
+                shadow-sm
+                ring-1
+                ring-slate-200
+              "
+            >
+              <ArrowLeft size={19} />
+            </button>
+          </div>
+
+          {/* =================================================
+              MAIN MENU
+          ================================================= */}
 
           {mobileMenu === "main" && (
             <>
-              {/* ================================================== */}
-              {/* ============== MOBILE USER TOP RIGHT ============== */}
-              {/* ================================================== */}
+              {/* USER */}
 
               <div
                 className="
-                  absolute
-                  right-0
-                  top-0
-                  z-50
+                  mb-5
                   flex
                   items-center
-                  gap-1.5
+                  justify-between
+                  rounded-2xl
+                  border
+                  border-slate-200
+                  bg-white
+                  px-4
+                  py-3
+                  shadow-sm
                 "
               >
-
-                {/* USER NAME */}
-
-                <div
-                  className="
-                    flex
-                    items-center
-                    gap-1.5
-                    rounded-full
-                    border
-                    border-slate-200
-                    bg-white
-                    px-2.5
-                    py-1.5
-                    shadow-sm
-                  "
-                >
-                  <UserCircle
-                    size={19}
-                    strokeWidth={1.8}
-                    className="text-blue-950"
-                  />
-
-                  <span
+                <div className="flex min-w-0 items-center gap-3">
+                  <div
                     className="
-                      max-w-[110px]
-                      truncate
-                      text-[11px]
-                      font-bold
-                      text-slate-700
+                      flex
+                      h-10
+                      w-10
+                      shrink-0
+                      items-center
+                      justify-center
+                      rounded-full
+                      bg-slate-100
+                      text-slate-600
                     "
                   >
-                    {userName}
-                  </span>
-                </div>
+                    <UserCircle size={23} />
+                  </div>
 
-                {/* LOGOUT */}
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-slate-400">
+                      Login sebagai
+                    </p>
+
+                    <p className="truncate text-sm font-semibold text-slate-800">
+                      {userName}
+                    </p>
+                  </div>
+                </div>
 
                 <button
                   type="button"
                   onClick={handleLogout}
-                  title="Logout"
                   className="
                     flex
-                    h-8
-                    w-8
+                    h-9
+                    w-9
+                    shrink-0
                     items-center
                     justify-center
-                    rounded-full
-                    border
-                    border-red-100
-                    bg-white
+                    rounded-xl
                     text-red-500
-                    shadow-sm
                     transition
                     hover:bg-red-50
-                    hover:text-red-600
-                    active:scale-95
                   "
+                  title="Logout"
                 >
-                  <LogOut
-                    size={15}
-                    strokeWidth={1.8}
-                  />
+                  <LogOut size={19} />
                 </button>
               </div>
 
-              {/* ================================================== */}
-              {/* ================= MOBILE HEADER ================== */}
-              {/* ================================================== */}
+              {/* MENU */}
 
-              <div className="mb-7 text-center">
-
-                <div
-                  className="
-                    mx-auto
-                    flex
-                    h-16
-                    w-16
-                    items-center
-                    justify-center
-                    rounded-2xl
-                    bg-blue-950
-                    shadow-lg
-                    ring-4
-                    ring-blue-100
-                  "
-                >
-                  <Warehouse
-                    size={34}
-                    strokeWidth={1.7}
-                    className="text-white"
-                  />
-                </div>
-
-                <h1
-                  className="
-                    mt-4
-                    text-2xl
-                    font-extrabold
-                    tracking-[0.14em]
-                    text-blue-950
-                  "
-                >
-                  ZEE-WMS
-                </h1>
-
-                <p
-                  className="
-                    mt-1
-                    text-[9px]
-                    font-semibold
-                    uppercase
-                    tracking-[0.2em]
-                    text-slate-500
-                  "
-                >
-                  Warehouse Management System
-                </p>
-
-              </div>
-
-              {/* ================================================== */}
-              {/* ================= MOBILE MENU ==================== */}
-              {/* ================================================== */}
-
-              <div className="mx-auto w-full max-w-sm space-y-4">
-
+              <div className="space-y-3">
                 {/* INBOUND */}
 
                 <button
                   type="button"
                   onClick={() => setMobileMenu("inbound")}
                   className="
-                    group
                     flex
                     w-full
                     items-center
-                    gap-4
+                    justify-between
                     rounded-2xl
                     border
                     border-slate-200
                     bg-white
                     p-4
                     text-left
-                    shadow-md
-                    transition-all
-                    duration-200
-                    active:scale-[0.98]
-                    hover:-translate-y-0.5
-                    hover:shadow-lg
+                    shadow-sm
+                    transition
+                    active:scale-[0.99]
+                    hover:bg-slate-50
                   "
                 >
-                  <div
-                    className="
-                      flex
-                      h-14
-                      w-14
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      bg-blue-100
-                      text-blue-800
-                    "
-                  >
-                    <PackagePlus
-                      size={28}
-                      strokeWidth={1.8}
-                    />
+                  <div className="flex items-center gap-4">
+                    <div
+                      className="
+                        flex
+                        h-12
+                        w-12
+                        items-center
+                        justify-center
+                        rounded-xl
+                        bg-blue-50
+                        text-blue-600
+                      "
+                    >
+                      <PackagePlus size={25} />
+                    </div>
+
+                    <div>
+                      <p className="font-bold text-slate-800">
+                        Inbound
+                      </p>
+
+                      <p className="text-xs text-slate-400">
+                        Proses barang masuk
+                      </p>
+                    </div>
                   </div>
 
-                  <div>
-                    <h2 className="text-base font-bold text-slate-800">
-                      Inbound
-                    </h2>
-
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      Receiving & Putaway
-                    </p>
-                  </div>
-
-                  <span className="ml-auto text-xl text-slate-300">
-                    ›
-                  </span>
+                  <ChevronRight
+                    size={21}
+                    className="text-slate-400"
+                  />
                 </button>
-
 
                 {/* OUTBOUND */}
 
@@ -500,59 +401,54 @@ export default function SystemPage() {
                   type="button"
                   onClick={() => setMobileMenu("outbound")}
                   className="
-                    group
                     flex
                     w-full
                     items-center
-                    gap-4
+                    justify-between
                     rounded-2xl
                     border
                     border-slate-200
                     bg-white
                     p-4
                     text-left
-                    shadow-md
-                    transition-all
-                    duration-200
-                    active:scale-[0.98]
-                    hover:-translate-y-0.5
-                    hover:shadow-lg
+                    shadow-sm
+                    transition
+                    active:scale-[0.99]
+                    hover:bg-slate-50
                   "
                 >
-                  <div
-                    className="
-                      flex
-                      h-14
-                      w-14
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      bg-orange-100
-                      text-orange-700
-                    "
-                  >
-                    <PackageCheck
-                      size={28}
-                      strokeWidth={1.8}
-                    />
+                  <div className="flex items-center gap-4">
+                    <div
+                      className="
+                        flex
+                        h-12
+                        w-12
+                        items-center
+                        justify-center
+                        rounded-xl
+                        bg-orange-50
+                        text-orange-600
+                      "
+                    >
+                      <PackageCheck size={25} />
+                    </div>
+
+                    <div>
+                      <p className="font-bold text-slate-800">
+                        Outbound
+                      </p>
+
+                      <p className="text-xs text-slate-400">
+                        Proses barang keluar
+                      </p>
+                    </div>
                   </div>
 
-                  <div>
-                    <h2 className="text-base font-bold text-slate-800">
-                      Outbound
-                    </h2>
-
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      Allocation & Picking
-                    </p>
-                  </div>
-
-                  <span className="ml-auto text-xl text-slate-300">
-                    ›
-                  </span>
+                  <ChevronRight
+                    size={21}
+                    className="text-slate-400"
+                  />
                 </button>
-
 
                 {/* INVENTORY */}
 
@@ -560,786 +456,376 @@ export default function SystemPage() {
                   type="button"
                   onClick={() => setMobileMenu("inventory")}
                   className="
-                    group
                     flex
                     w-full
                     items-center
-                    gap-4
+                    justify-between
                     rounded-2xl
                     border
                     border-slate-200
                     bg-white
                     p-4
                     text-left
-                    shadow-md
-                    transition-all
-                    duration-200
-                    active:scale-[0.98]
-                    hover:-translate-y-0.5
-                    hover:shadow-lg
+                    shadow-sm
+                    transition
+                    active:scale-[0.99]
+                    hover:bg-slate-50
                   "
                 >
-                  <div
-                    className="
-                      flex
-                      h-14
-                      w-14
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      bg-emerald-100
-                      text-emerald-700
-                    "
-                  >
-                    <Boxes
-                      size={28}
-                      strokeWidth={1.8}
-                    />
+                  <div className="flex items-center gap-4">
+                    <div
+                      className="
+                        flex
+                        h-12
+                        w-12
+                        items-center
+                        justify-center
+                        rounded-xl
+                        bg-emerald-50
+                        text-emerald-600
+                      "
+                    >
+                      <Boxes size={25} />
+                    </div>
+
+                    <div>
+                      <p className="font-bold text-slate-800">
+                        Inventory
+                      </p>
+
+                      <p className="text-xs text-slate-400">
+                        Kelola stok barang
+                      </p>
+                    </div>
                   </div>
 
-                  <div>
-                    <h2 className="text-base font-bold text-slate-800">
-                      Inventory
-                    </h2>
-
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      Stock & Location
-                    </p>
-                  </div>
-
-                  <span className="ml-auto text-xl text-slate-300">
-                    ›
-                  </span>
-                </button>
-
-
-                {/* ================================================== */}
-                {/* ================= COUNTING ======================= */}
-                {/* ================================================== */}
-
-                <button
-                  type="button"
-                  onClick={() => setMobileMenu("counting")}
-                  className="
-                    group
-                    flex
-                    w-full
-                    items-center
-                    gap-4
-                    rounded-2xl
-                    border
-                    border-slate-200
-                    bg-white
-                    p-4
-                    text-left
-                    shadow-md
-                    transition-all
-                    duration-200
-                    active:scale-[0.98]
-                    hover:-translate-y-0.5
-                    hover:shadow-lg
-                  "
-                >
-                  <div
-                    className="
-                      flex
-                      h-14
-                      w-14
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      bg-purple-100
-                      text-purple-700
-                    "
-                  >
-                    <ClipboardList
-                      size={28}
-                      strokeWidth={1.8}
-                    />
-                  </div>
-
-                  <div>
-                    <h2 className="text-base font-bold text-slate-800">
-                      Counting
-                    </h2>
-
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      Stock Opname & Counting
-                    </p>
-                  </div>
-
-                  <span className="ml-auto text-xl text-slate-300">
-                    ›
-                  </span>
-                </button>
-
-              </div>
-
-              {/* MOBILE FOOTER */}
-
-              <p className="mt-8 text-center text-[10px] text-slate-400">
-                ZEE-WMS Mobile
-              </p>
-            </>
-          )}
-
-
-          {/* ================================================== */}
-          {/* ================= INBOUND MOBILE ================= */}
-          {/* ================================================== */}
-
-          {mobileMenu === "inbound" && (
-            <>
-              <div className="mb-7 text-center">
-
-                <div
-                  className="
-                    mx-auto
-                    flex
-                    h-16
-                    w-16
-                    items-center
-                    justify-center
-                    rounded-2xl
-                    bg-blue-950
-                    text-white
-                    shadow-lg
-                    ring-4
-                    ring-blue-100
-                  "
-                >
-                  <PackagePlus
-                    size={34}
-                    strokeWidth={1.7}
+                  <ChevronRight
+                    size={21}
+                    className="text-slate-400"
                   />
-                </div>
-
-                <h1 className="mt-4 text-2xl font-extrabold text-blue-950">
-                  Inbound
-                </h1>
-
-                <p className="mt-1 text-xs text-slate-500">
-                  Receiving & Putaway
-                </p>
-
-              </div>
-
-              <div className="mx-auto w-full max-w-sm space-y-4">
-
-                {/* CHECKING */}
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    router.push("/inbound/checking")
-                  }
-                  className="
-                    flex
-                    w-full
-                    items-center
-                    gap-4
-                    rounded-2xl
-                    border
-                    border-slate-200
-                    bg-white
-                    p-4
-                    text-left
-                    shadow-md
-                    transition-all
-                    active:scale-[0.98]
-                    hover:shadow-lg
-                  "
-                >
-                  <div
-                    className="
-                      flex
-                      h-14
-                      w-14
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      bg-blue-100
-                      text-blue-800
-                    "
-                  >
-                    <ClipboardCheck
-                      size={28}
-                      strokeWidth={1.8}
-                    />
-                  </div>
-
-                  <div>
-                    <h2 className="text-base font-bold text-slate-800">
-                      Checking
-                    </h2>
-
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      Receiving & Checking
-                    </p>
-                  </div>
-
-                  <span className="ml-auto text-xl text-slate-300">
-                    ›
-                  </span>
                 </button>
-
-
-                {/* PUTAWAY */}
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    router.push("/inbound/putaway")
-                  }
-                  className="
-                    flex
-                    w-full
-                    items-center
-                    gap-4
-                    rounded-2xl
-                    border
-                    border-slate-200
-                    bg-white
-                    p-4
-                    text-left
-                    shadow-md
-                    transition-all
-                    active:scale-[0.98]
-                    hover:shadow-lg
-                  "
-                >
-                  <div
-                    className="
-                      flex
-                      h-14
-                      w-14
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      bg-indigo-100
-                      text-indigo-700
-                    "
-                  >
-                    <PackageOpen
-                      size={28}
-                      strokeWidth={1.8}
-                    />
-                  </div>
-
-                  <div>
-                    <h2 className="text-base font-bold text-slate-800">
-                      Putaway
-                    </h2>
-
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      Putaway & Location
-                    </p>
-                  </div>
-
-                  <span className="ml-auto text-xl text-slate-300">
-                    ›
-                  </span>
-                </button>
-
-              </div>
-
-              {/* BACK */}
-
-              <button
-                type="button"
-                onClick={() =>
-                  setMobileMenu("main")
-                }
-                className="
-                  mx-auto
-                  mt-7
-                  flex
-                  items-center
-                  gap-2
-                  rounded-xl
-                  px-4
-                  py-2
-                  text-sm
-                  font-medium
-                  text-slate-500
-                  transition
-                  hover:bg-slate-200
-                  hover:text-slate-800
-                "
-              >
-                <ArrowLeft size={17} />
-                Kembali ke Menu
-              </button>
-            </>
-          )}
-
-
-          {/* ================================================== */}
-          {/* ================= OUTBOUND MOBILE ================ */}
-          {/* ================================================== */}
-
-          {mobileMenu === "outbound" && (
-            <>
-              <div className="mb-7 text-center">
-
-                <div
-                  className="
-                    mx-auto
-                    flex
-                    h-16
-                    w-16
-                    items-center
-                    justify-center
-                    rounded-2xl
-                    bg-orange-600
-                    text-white
-                    shadow-lg
-                    ring-4
-                    ring-orange-100
-                  "
-                >
-                  <PackageCheck
-                    size={34}
-                    strokeWidth={1.7}
-                  />
-                </div>
-
-                <h1 className="mt-4 text-2xl font-extrabold text-orange-700">
-                  Outbound
-                </h1>
-
-                <p className="mt-1 text-xs text-slate-500">
-                  Picking & Packing
-                </p>
-
-              </div>
-
-              <div className="mx-auto w-full max-w-sm space-y-4">
-
-                {/* PICKING */}
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    router.push("/outbound/picking")
-                  }
-                  className="
-                    flex
-                    w-full
-                    items-center
-                    gap-4
-                    rounded-2xl
-                    border
-                    border-slate-200
-                    bg-white
-                    p-4
-                    text-left
-                    shadow-md
-                    transition-all
-                    active:scale-[0.98]
-                    hover:shadow-lg
-                  "
-                >
-                  <div
-                    className="
-                      flex
-                      h-14
-                      w-14
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      bg-orange-100
-                      text-orange-700
-                    "
-                  >
-                    <ScanLine
-                      size={28}
-                      strokeWidth={1.8}
-                    />
-                  </div>
-
-                  <div>
-                    <h2 className="text-base font-bold text-slate-800">
-                      Picking
-                    </h2>
-
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      Picking Order
-                    </p>
-                  </div>
-
-                  <span className="ml-auto text-xl text-slate-300">
-                    ›
-                  </span>
-                </button>
-
-
-                {/* PACKING */}
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    router.push("/outbound/packing")
-                  }
-                  className="
-                    flex
-                    w-full
-                    items-center
-                    gap-4
-                    rounded-2xl
-                    border
-                    border-slate-200
-                    bg-white
-                    p-4
-                    text-left
-                    shadow-md
-                    transition-all
-                    active:scale-[0.98]
-                    hover:shadow-lg
-                  "
-                >
-                  <div
-                    className="
-                      flex
-                      h-14
-                      w-14
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      bg-amber-100
-                      text-amber-700
-                    "
-                  >
-                    <Box
-                      size={28}
-                      strokeWidth={1.8}
-                    />
-                  </div>
-
-                  <div>
-                    <h2 className="text-base font-bold text-slate-800">
-                      Packing
-                    </h2>
-
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      Packing Order
-                    </p>
-                  </div>
-
-                  <span className="ml-auto text-xl text-slate-300">
-                    ›
-                  </span>
-                </button>
-
-              </div>
-
-              {/* BACK */}
-
-              <button
-                type="button"
-                onClick={() =>
-                  setMobileMenu("main")
-                }
-                className="
-                  mx-auto
-                  mt-7
-                  flex
-                  items-center
-                  gap-2
-                  rounded-xl
-                  px-4
-                  py-2
-                  text-sm
-                  font-medium
-                  text-slate-500
-                  transition
-                  hover:bg-slate-200
-                  hover:text-slate-800
-                "
-              >
-                <ArrowLeft size={17} />
-                Kembali ke Menu
-              </button>
-            </>
-          )}
-
-
-          {/* ================================================== */}
-          {/* ================= INVENTORY MOBILE =============== */}
-          {/* ================================================== */}
-
-          {mobileMenu === "inventory" && (
-            <>
-              <div className="mb-7 text-center">
-
-                <div
-                  className="
-                    mx-auto
-                    flex
-                    h-16
-                    w-16
-                    items-center
-                    justify-center
-                    rounded-2xl
-                    bg-emerald-600
-                    text-white
-                    shadow-lg
-                    ring-4
-                    ring-emerald-100
-                  "
-                >
-                  <Boxes
-                    size={34}
-                    strokeWidth={1.7}
-                  />
-                </div>
-
-                <h1 className="mt-4 text-2xl font-extrabold text-emerald-700">
-                  Inventory
-                </h1>
-
-                <p className="mt-1 text-xs text-slate-500">
-                  Stock & Location
-                </p>
-
-              </div>
-
-              <div className="mx-auto w-full max-w-sm">
-
-                {/* MOVEMENT */}
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    router.push("/inventory/movement")
-                  }
-                  className="
-                    flex
-                    w-full
-                    items-center
-                    gap-4
-                    rounded-2xl
-                    border
-                    border-slate-200
-                    bg-white
-                    p-4
-                    text-left
-                    shadow-md
-                    transition-all
-                    active:scale-[0.98]
-                    hover:shadow-lg
-                  "
-                >
-                  <div
-                    className="
-                      flex
-                      h-14
-                      w-14
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      bg-emerald-100
-                      text-emerald-700
-                    "
-                  >
-                    <MoveRight
-                      size={28}
-                      strokeWidth={1.8}
-                    />
-                  </div>
-
-                  <div>
-                    <h2 className="text-base font-bold text-slate-800">
-                      Movement
-                    </h2>
-
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      Stock Movement
-                    </p>
-                  </div>
-
-                  <span className="ml-auto text-xl text-slate-300">
-                    ›
-                  </span>
-                </button>
-
-              </div>
-
-              {/* BACK */}
-
-              <button
-                type="button"
-                onClick={() =>
-                  setMobileMenu("main")
-                }
-                className="
-                  mx-auto
-                  mt-7
-                  flex
-                  items-center
-                  gap-2
-                  rounded-xl
-                  px-4
-                  py-2
-                  text-sm
-                  font-medium
-                  text-slate-500
-                  transition
-                  hover:bg-slate-200
-                  hover:text-slate-800
-                "
-              >
-                <ArrowLeft size={17} />
-                Kembali ke Menu
-              </button>
-            </>
-          )}
-
-
-          {/* ================================================== */}
-          {/* ================= COUNTING MOBILE ================ */}
-          {/* ================================================== */}
-
-          {mobileMenu === "counting" && (
-            <>
-              <div className="mb-7 text-center">
-
-                <div
-                  className="
-                    mx-auto
-                    flex
-                    h-16
-                    w-16
-                    items-center
-                    justify-center
-                    rounded-2xl
-                    bg-purple-600
-                    text-white
-                    shadow-lg
-                    ring-4
-                    ring-purple-100
-                  "
-                >
-                  <ClipboardList
-                    size={34}
-                    strokeWidth={1.7}
-                  />
-                </div>
-
-                <h1 className="mt-4 text-2xl font-extrabold text-purple-700">
-                  Counting
-                </h1>
-
-                <p className="mt-1 text-xs text-slate-500">
-                  Stock Opname & Counting
-                </p>
-
-              </div>
-
-
-              <div className="mx-auto w-full max-w-sm space-y-4">
 
                 {/* COUNTING */}
 
                 <button
                   type="button"
-                  onClick={() =>
-                    router.push("/counting")
-                  }
+                  onClick={() => setMobileMenu("counting")}
                   className="
                     flex
                     w-full
                     items-center
-                    gap-4
+                    justify-between
                     rounded-2xl
                     border
                     border-slate-200
                     bg-white
                     p-4
                     text-left
-                    shadow-md
-                    transition-all
-                    active:scale-[0.98]
-                    hover:shadow-lg
+                    shadow-sm
+                    transition
+                    active:scale-[0.99]
+                    hover:bg-slate-50
                   "
                 >
-                  <div
-                    className="
-                      flex
-                      h-14
-                      w-14
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      bg-purple-100
-                      text-purple-700
-                    "
-                  >
-                    <ClipboardList
-                      size={28}
-                      strokeWidth={1.8}
-                    />
+                  <div className="flex items-center gap-4">
+                    <div
+                      className="
+                        flex
+                        h-12
+                        w-12
+                        items-center
+                        justify-center
+                        rounded-xl
+                        bg-violet-50
+                        text-violet-600
+                      "
+                    >
+                      <ClipboardCheck size={25} />
+                    </div>
+
+                    <div>
+                      <p className="font-bold text-slate-800">
+                        Counting
+                      </p>
+
+                      <p className="text-xs text-slate-400">
+                        Proses stock counting
+                      </p>
+                    </div>
                   </div>
 
-                  <div>
-                    <h2 className="text-base font-bold text-slate-800">
-                      Stock Counting
-                    </h2>
-
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      First, Second & Third Count
-                    </p>
-                  </div>
-
-                  <span className="ml-auto text-xl text-slate-300">
-                    ›
-                  </span>
+                  <ChevronRight
+                    size={21}
+                    className="text-slate-400"
+                  />
                 </button>
-
               </div>
-
-
-              {/* BACK */}
-
-              <button
-                type="button"
-                onClick={() =>
-                  setMobileMenu("main")
-                }
-                className="
-                  mx-auto
-                  mt-7
-                  flex
-                  items-center
-                  gap-2
-                  rounded-xl
-                  px-4
-                  py-2
-                  text-sm
-                  font-medium
-                  text-slate-500
-                  transition
-                  hover:bg-slate-200
-                  hover:text-slate-800
-                "
-              >
-                <ArrowLeft size={17} />
-                Kembali ke Menu
-              </button>
-
             </>
           )}
 
+          {/* =================================================
+              INBOUND SUBMENU
+          ================================================= */}
+
+          {mobileMenu === "inbound" && (
+            <MobileSubMenu
+              title="Inbound"
+              description="Pilih proses inbound"
+              icon={<PackagePlus size={24} />}
+              iconClass="bg-blue-50 text-blue-600"
+              onBack={backToMain}
+              items={[
+                {
+                  title: "Checking",
+                  description: "Pemeriksaan barang masuk",
+                  icon: <ClipboardCheck size={22} />,
+                  onClick: () => goTo("/inbound/checking"),
+                },
+                {
+                  title: "Putaway",
+                  description: "Penempatan barang ke lokasi",
+                  icon: <PackageOpen size={22} />,
+                  onClick: () => goTo("/inbound/putaway"),
+                },
+              ]}
+            />
+          )}
+
+          {/* =================================================
+              OUTBOUND SUBMENU
+          ================================================= */}
+
+          {mobileMenu === "outbound" && (
+            <MobileSubMenu
+              title="Outbound"
+              description="Pilih proses outbound"
+              icon={<PackageCheck size={24} />}
+              iconClass="bg-orange-50 text-orange-600"
+              onBack={backToMain}
+              items={[
+                {
+                  title: "Picking",
+                  description: "Pengambilan barang",
+                  icon: <ClipboardList size={22} />,
+                  onClick: () => goTo("/outbound/picking"),
+                },
+                {
+                  title: "Packing",
+                  description: "Proses packing barang",
+                  icon: <Box size={22} />,
+                  onClick: () => goTo("/outbound/packing"),
+                },
+              ]}
+            />
+          )}
+
+          {/* =================================================
+              INVENTORY SUBMENU
+          ================================================= */}
+
+          {mobileMenu === "inventory" && (
+            <MobileSubMenu
+              title="Inventory"
+              description="Pilih proses inventory"
+              icon={<Boxes size={24} />}
+              iconClass="bg-emerald-50 text-emerald-600"
+              onBack={backToMain}
+              items={[
+                {
+                  title: "Movement",
+                  description: "Perpindahan stok antar lokasi",
+                  icon: <MoveRight size={22} />,
+                  onClick: () => goTo("/inventory/movement"),
+                },
+              ]}
+            />
+          )}
+
+          {/* =================================================
+              COUNTING SUBMENU
+          ================================================= */}
+
+          {mobileMenu === "counting" && (
+            <MobileSubMenu
+              title="Counting"
+              description="Pilih tahap stock counting"
+              icon={<ClipboardCheck size={24} />}
+              iconClass="bg-violet-50 text-violet-600"
+              onBack={backToMain}
+              items={[
+                {
+                  title: "First Count",
+                  description: "Perhitungan fisik pertama",
+                  icon: <ClipboardCheck size={22} />,
+                  onClick: () => goTo("/counting/firstcount"),
+                },
+                {
+                  title: "Second Count",
+                  description: "Perhitungan ulang selisih",
+                  icon: <ClipboardList size={22} />,
+                  onClick: () => goTo("/counting/secondcount"),
+                },
+                {
+                  title: "Third Count",
+                  description: "Perhitungan akhir selisih",
+                  icon: <ScanLine size={22} />,
+                  onClick: () => goTo("/counting/thirdcount"),
+                },
+              ]}
+            />
+          )}
         </div>
       </main>
     </div>
+  );
+}
+
+// =========================================================
+// MOBILE SUBMENU COMPONENT
+// =========================================================
+
+type SubMenuItem = {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+};
+
+type MobileSubMenuProps = {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  iconClass: string;
+  onBack: () => void;
+  items: SubMenuItem[];
+};
+
+function MobileSubMenu({
+  title,
+  description,
+  icon,
+  iconClass,
+  onBack,
+  items,
+}: MobileSubMenuProps) {
+  return (
+    <>
+      {/* HEADER SUBMENU */}
+
+      <div
+        className="
+          mb-5
+          rounded-2xl
+          border
+          border-slate-200
+          bg-white
+          p-4
+          shadow-sm
+        "
+      >
+        <button
+          type="button"
+          onClick={onBack}
+          className="
+            mb-4
+            flex
+            items-center
+            gap-2
+            text-sm
+            font-semibold
+            text-slate-500
+          "
+        >
+          <ArrowLeft size={18} />
+          Kembali ke Menu
+        </button>
+
+        <div className="flex items-center gap-4">
+          <div
+            className={`
+              flex
+              h-12
+              w-12
+              items-center
+              justify-center
+              rounded-xl
+              ${iconClass}
+            `}
+          >
+            {icon}
+          </div>
+
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">
+              {title}
+            </h2>
+
+            <p className="text-xs text-slate-400">
+              {description}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* SUBMENU ITEMS */}
+
+      <div className="space-y-3">
+        {items.map((item) => (
+          <button
+            key={item.title}
+            type="button"
+            onClick={item.onClick}
+            className="
+              flex
+              w-full
+              items-center
+              justify-between
+              rounded-2xl
+              border
+              border-slate-200
+              bg-white
+              p-4
+              text-left
+              shadow-sm
+              transition
+              active:scale-[0.99]
+              hover:bg-slate-50
+            "
+          >
+            <div className="flex items-center gap-4">
+              <div
+                className="
+                  flex
+                  h-11
+                  w-11
+                  items-center
+                  justify-center
+                  rounded-xl
+                  bg-slate-100
+                  text-slate-600
+                "
+              >
+                {item.icon}
+              </div>
+
+              <div>
+                <p className="font-bold text-slate-800">
+                  {item.title}
+                </p>
+
+                <p className="mt-0.5 text-xs text-slate-400">
+                  {item.description}
+                </p>
+              </div>
+            </div>
+
+            <ChevronRight
+              size={20}
+              className="text-slate-400"
+            />
+          </button>
+        ))}
+      </div>
+    </>
   );
 }
