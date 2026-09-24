@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -18,7 +19,6 @@ import {
   UserCircle,
   LogOut,
 } from "lucide-react";
-
 import Sidebar from "../../components/Sidebar";
 import { supabase } from "../../lib/supabase";
 
@@ -92,6 +92,7 @@ export default function SystemPage() {
 
   return (
     <div className="flex min-h-screen bg-slate-100">
+
       {/* ================================================== */}
       {/* ===================== SIDEBAR ==================== */}
       {/* ================================================== */}
@@ -106,6 +107,7 @@ export default function SystemPage() {
       {/* ================================================== */}
 
       <main className="relative flex-1 overflow-hidden p-3 sm:p-5 md:p-6">
+
         {/* ================================================== */}
         {/* ================= BACKGROUND GRID ================= */}
         {/* ================================================== */}
@@ -201,8 +203,8 @@ export default function SystemPage() {
           "
         >
           <div className="flex w-full max-w-md flex-col items-center justify-center">
-            {/* LOGO */}
 
+            {/* LOGO */}
             <div
               className="
                 flex
@@ -229,7 +231,6 @@ export default function SystemPage() {
             </div>
 
             {/* ZEE-WMS */}
-
             <h1
               className="
                 mt-5
@@ -247,7 +248,6 @@ export default function SystemPage() {
             </h1>
 
             {/* SUBTITLE */}
-
             <p
               className="
                 mt-2
@@ -264,6 +264,7 @@ export default function SystemPage() {
             >
               Warehouse Management System
             </p>
+
           </div>
         </div>
 
@@ -283,6 +284,7 @@ export default function SystemPage() {
             md:hidden
           "
         >
+
           {/* ================================================== */}
           {/* ================= MAIN MOBILE ==================== */}
           {/* ================================================== */}
@@ -304,6 +306,7 @@ export default function SystemPage() {
                   gap-1.5
                 "
               >
+
                 {/* USER NAME */}
 
                 <div
@@ -375,6 +378,7 @@ export default function SystemPage() {
               {/* ================================================== */}
 
               <div className="mb-7 text-center">
+
                 <div
                   className="
                     mx-auto
@@ -421,6 +425,7 @@ export default function SystemPage() {
                 >
                   Warehouse Management System
                 </p>
+
               </div>
 
               {/* ================================================== */}
@@ -428,6 +433,7 @@ export default function SystemPage() {
               {/* ================================================== */}
 
               <div className="mx-auto w-full max-w-sm space-y-4">
+
                 {/* INBOUND */}
 
                 <button
@@ -486,6 +492,7 @@ export default function SystemPage() {
                     ›
                   </span>
                 </button>
+
 
                 {/* OUTBOUND */}
 
@@ -546,6 +553,7 @@ export default function SystemPage() {
                   </span>
                 </button>
 
+
                 {/* INVENTORY */}
 
                 <button
@@ -604,6 +612,7 @@ export default function SystemPage() {
                     ›
                   </span>
                 </button>
+
 
                 {/* ================================================== */}
                 {/* ================= COUNTING ======================= */}
@@ -665,6 +674,7 @@ export default function SystemPage() {
                     ›
                   </span>
                 </button>
+
               </div>
 
               {/* MOBILE FOOTER */}
@@ -675,6 +685,7 @@ export default function SystemPage() {
             </>
           )}
 
+
           {/* ================================================== */}
           {/* ================= INBOUND MOBILE ================= */}
           {/* ================================================== */}
@@ -682,6 +693,7 @@ export default function SystemPage() {
           {mobileMenu === "inbound" && (
             <>
               <div className="mb-7 text-center">
+
                 <div
                   className="
                     mx-auto
@@ -711,9 +723,11 @@ export default function SystemPage() {
                 <p className="mt-1 text-xs text-slate-500">
                   Receiving & Putaway
                 </p>
+
               </div>
 
               <div className="mx-auto w-full max-w-sm space-y-4">
+
                 {/* CHECKING */}
 
                 <button
@@ -772,6 +786,7 @@ export default function SystemPage() {
                   </span>
                 </button>
 
+
                 {/* PUTAWAY */}
 
                 <button
@@ -829,13 +844,16 @@ export default function SystemPage() {
                     ›
                   </span>
                 </button>
+
               </div>
 
               {/* BACK */}
 
               <button
                 type="button"
-                onClick={() => setMobileMenu("main")}
+                onClick={() =>
+                  setMobileMenu("main")
+                }
                 className="
                   mx-auto
                   mt-7
@@ -859,6 +877,7 @@ export default function SystemPage() {
             </>
           )}
 
+
           {/* ================================================== */}
           {/* ================= OUTBOUND MOBILE ================ */}
           {/* ================================================== */}
@@ -866,6 +885,7 @@ export default function SystemPage() {
           {mobileMenu === "outbound" && (
             <>
               <div className="mb-7 text-center">
+
                 <div
                   className="
                     mx-auto
@@ -895,9 +915,11 @@ export default function SystemPage() {
                 <p className="mt-1 text-xs text-slate-500">
                   Picking & Packing
                 </p>
+
               </div>
 
               <div className="mx-auto w-full max-w-sm space-y-4">
+
                 {/* PICKING */}
 
                 <button
@@ -956,6 +978,7 @@ export default function SystemPage() {
                   </span>
                 </button>
 
+
                 {/* PACKING */}
 
                 <button
@@ -1013,13 +1036,16 @@ export default function SystemPage() {
                     ›
                   </span>
                 </button>
+
               </div>
 
               {/* BACK */}
 
               <button
                 type="button"
-                onClick={() => setMobileMenu("main")}
+                onClick={() =>
+                  setMobileMenu("main")
+                }
                 className="
                   mx-auto
                   mt-7
@@ -1043,6 +1069,7 @@ export default function SystemPage() {
             </>
           )}
 
+
           {/* ================================================== */}
           {/* ================= INVENTORY MOBILE =============== */}
           {/* ================================================== */}
@@ -1050,6 +1077,7 @@ export default function SystemPage() {
           {mobileMenu === "inventory" && (
             <>
               <div className="mb-7 text-center">
+
                 <div
                   className="
                     mx-auto
@@ -1079,9 +1107,11 @@ export default function SystemPage() {
                 <p className="mt-1 text-xs text-slate-500">
                   Stock & Location
                 </p>
+
               </div>
 
               <div className="mx-auto w-full max-w-sm">
+
                 {/* MOVEMENT */}
 
                 <button
@@ -1139,13 +1169,16 @@ export default function SystemPage() {
                     ›
                   </span>
                 </button>
+
               </div>
 
               {/* BACK */}
 
               <button
                 type="button"
-                onClick={() => setMobileMenu("main")}
+                onClick={() =>
+                  setMobileMenu("main")
+                }
                 className="
                   mx-auto
                   mt-7
@@ -1169,15 +1202,15 @@ export default function SystemPage() {
             </>
           )}
 
+
           {/* ================================================== */}
           {/* ================= COUNTING MOBILE ================ */}
           {/* ================================================== */}
 
           {mobileMenu === "counting" && (
             <>
-              {/* COUNTING HEADER */}
-
               <div className="mb-7 text-center">
+
                 <div
                   className="
                     mx-auto
@@ -1207,77 +1240,18 @@ export default function SystemPage() {
                 <p className="mt-1 text-xs text-slate-500">
                   Stock Opname & Counting
                 </p>
+
               </div>
 
-              {/* ==================================================
-                  COUNTING SUBMENU
-              ================================================== */}
 
               <div className="mx-auto w-full max-w-sm space-y-4">
-                {/* FIRST COUNT */}
+
+                {/* COUNTING */}
 
                 <button
                   type="button"
                   onClick={() =>
-                    router.push("/counting/firstcount")
-                  }
-                  className="
-                    flex
-                    w-full
-                    items-center
-                    gap-4
-                    rounded-2xl
-                    border
-                    border-slate-200
-                    bg-white
-                    p-4
-                    text-left
-                    shadow-md
-                    transition-all
-                    active:scale-[0.98]
-                    hover:shadow-lg
-                  "
-                >
-                  <div
-                    className="
-                      flex
-                      h-14
-                      w-14
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      bg-purple-100
-                      text-purple-700
-                    "
-                  >
-                    <ClipboardCheck
-                      size={28}
-                      strokeWidth={1.8}
-                    />
-                  </div>
-
-                  <div>
-                    <h2 className="text-base font-bold text-slate-800">
-                      First Count
-                    </h2>
-
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      Perhitungan fisik pertama
-                    </p>
-                  </div>
-
-                  <span className="ml-auto text-xl text-slate-300">
-                    ›
-                  </span>
-                </button>
-
-                {/* SECOND COUNT */}
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    router.push("/counting/secondcount")
+                    router.push("/counting")
                   }
                   className="
                     flex
@@ -1317,11 +1291,11 @@ export default function SystemPage() {
 
                   <div>
                     <h2 className="text-base font-bold text-slate-800">
-                      Second Count
+                      Stock Counting
                     </h2>
 
                     <p className="mt-0.5 text-xs text-slate-500">
-                      Perhitungan ulang selisih
+                      First, Second & Third Count
                     </p>
                   </div>
 
@@ -1330,72 +1304,16 @@ export default function SystemPage() {
                   </span>
                 </button>
 
-                {/* THIRD COUNT */}
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    router.push("/counting/thirdcount")
-                  }
-                  className="
-                    flex
-                    w-full
-                    items-center
-                    gap-4
-                    rounded-2xl
-                    border
-                    border-slate-200
-                    bg-white
-                    p-4
-                    text-left
-                    shadow-md
-                    transition-all
-                    active:scale-[0.98]
-                    hover:shadow-lg
-                  "
-                >
-                  <div
-                    className="
-                      flex
-                      h-14
-                      w-14
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      bg-purple-100
-                      text-purple-700
-                    "
-                  >
-                    <ScanLine
-                      size={28}
-                      strokeWidth={1.8}
-                    />
-                  </div>
-
-                  <div>
-                    <h2 className="text-base font-bold text-slate-800">
-                      Third Count
-                    </h2>
-
-                    <p className="mt-0.5 text-xs text-slate-500">
-                      Perhitungan akhir selisih
-                    </p>
-                  </div>
-
-                  <span className="ml-auto text-xl text-slate-300">
-                    ›
-                  </span>
-                </button>
               </div>
 
-              {/* ==================================================
-                  BACK TO MAIN MENU
-              ================================================== */}
+
+              {/* BACK */}
 
               <button
                 type="button"
-                onClick={() => setMobileMenu("main")}
+                onClick={() =>
+                  setMobileMenu("main")
+                }
                 className="
                   mx-auto
                   mt-7
@@ -1416,10 +1334,13 @@ export default function SystemPage() {
                 <ArrowLeft size={17} />
                 Kembali ke Menu
               </button>
+
             </>
           )}
+
         </div>
       </main>
     </div>
   );
 }
+

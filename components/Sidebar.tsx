@@ -74,7 +74,7 @@ const handleLogout = async () => {
 
   return (
     <aside
-  className={`min-h-screen bg-transparent text-slate-900 transition-all duration-300 flex flex-col ${
+  className={`min-h-screen bg-slate-100 text-slate-900 transition-all duration-300 flex flex-col ${
     collapsed ? "w-20" : "w-64"
   }`}
 >
@@ -87,7 +87,7 @@ const handleLogout = async () => {
 
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="text-white hover:bg-slate-800 p-2 rounded"
+          className="text-slate-900 hover:bg-slate-800 p-2 rounded"
         >
           {collapsed ? <Menu size={18} /> : <X size={18} />}
         </button>

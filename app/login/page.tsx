@@ -473,7 +473,7 @@ if (isMobileApp === null) {
           fontWeight: "700",
         }}
       >
-        500+ Clients
+        Multy Clients
       </h3>
 
       <p
