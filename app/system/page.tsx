@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -205,6 +204,7 @@ export default function SystemPage() {
           <div className="flex w-full max-w-md flex-col items-center justify-center">
 
             {/* LOGO */}
+
             <div
               className="
                 flex
@@ -231,6 +231,7 @@ export default function SystemPage() {
             </div>
 
             {/* ZEE-WMS */}
+
             <h1
               className="
                 mt-5
@@ -248,6 +249,7 @@ export default function SystemPage() {
             </h1>
 
             {/* SUBTITLE */}
+
             <p
               className="
                 mt-2
@@ -1209,6 +1211,8 @@ export default function SystemPage() {
 
           {mobileMenu === "counting" && (
             <>
+              {/* ================= COUNTING HEADER ================= */}
+
               <div className="mb-7 text-center">
 
                 <div
@@ -1244,14 +1248,16 @@ export default function SystemPage() {
               </div>
 
 
+              {/* ================= COUNTING SUBMENU ================= */}
+
               <div className="mx-auto w-full max-w-sm space-y-4">
 
-                {/* COUNTING */}
+                {/* ================= FIRST COUNT ================= */}
 
                 <button
                   type="button"
                   onClick={() =>
-                    router.push("/counting")
+                    router.push("/counting/firstcount")
                   }
                   className="
                     flex
@@ -1291,11 +1297,129 @@ export default function SystemPage() {
 
                   <div>
                     <h2 className="text-base font-bold text-slate-800">
-                      Stock Counting
+                      First Count
                     </h2>
 
                     <p className="mt-0.5 text-xs text-slate-500">
-                      First, Second & Third Count
+                      Perhitungan Stock Awal
+                    </p>
+                  </div>
+
+                  <span className="ml-auto text-xl text-slate-300">
+                    ›
+                  </span>
+                </button>
+
+
+                {/* ================= SECOND COUNT ================= */}
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push("/counting/secondcount")
+                  }
+                  className="
+                    flex
+                    w-full
+                    items-center
+                    gap-4
+                    rounded-2xl
+                    border
+                    border-slate-200
+                    bg-white
+                    p-4
+                    text-left
+                    shadow-md
+                    transition-all
+                    active:scale-[0.98]
+                    hover:shadow-lg
+                  "
+                >
+                  <div
+                    className="
+                      flex
+                      h-14
+                      w-14
+                      shrink-0
+                      items-center
+                      justify-center
+                      rounded-xl
+                      bg-indigo-100
+                      text-indigo-700
+                    "
+                  >
+                    <ClipboardCheck
+                      size={28}
+                      strokeWidth={1.8}
+                    />
+                  </div>
+
+                  <div>
+                    <h2 className="text-base font-bold text-slate-800">
+                      Second Count
+                    </h2>
+
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      Perhitungan Ulang Stock
+                    </p>
+                  </div>
+
+                  <span className="ml-auto text-xl text-slate-300">
+                    ›
+                  </span>
+                </button>
+
+
+                {/* ================= THIRD COUNT ================= */}
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push("/counting/thirdcount")
+                  }
+                  className="
+                    flex
+                    w-full
+                    items-center
+                    gap-4
+                    rounded-2xl
+                    border
+                    border-slate-200
+                    bg-white
+                    p-4
+                    text-left
+                    shadow-md
+                    transition-all
+                    active:scale-[0.98]
+                    hover:shadow-lg
+                  "
+                >
+                  <div
+                    className="
+                      flex
+                      h-14
+                      w-14
+                      shrink-0
+                      items-center
+                      justify-center
+                      rounded-xl
+                      bg-violet-100
+                      text-violet-700
+                    "
+                  >
+                    <PackageCheck
+                      size={28}
+                      strokeWidth={1.8}
+                    />
+                  </div>
+
+                  <div>
+                    <h2 className="text-base font-bold text-slate-800">
+                      Third Count
+                    </h2>
+
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      Finalisasi Hasil Counting
                     </p>
                   </div>
 
@@ -1307,7 +1431,7 @@ export default function SystemPage() {
               </div>
 
 
-              {/* BACK */}
+              {/* ================= BACK ================= */}
 
               <button
                 type="button"
@@ -1343,4 +1467,3 @@ export default function SystemPage() {
     </div>
   );
 }
-
