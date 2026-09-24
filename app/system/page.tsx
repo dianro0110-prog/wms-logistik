@@ -31,32 +31,39 @@ export default function SystemPage() {
   const [userName, setUserName] = useState<string>("User");
 
   /* ====================================================== */
-  /* ================= GET LOGIN USER ===================== */
+  /* ================= AUTH PROTECTION ==================== */
   /* ====================================================== */
 
   useEffect(() => {
-    const getUser = async () => {
+    let mounted = true;
+
+    const checkAuth = async () => {
       const {
-        data: { user },
-      } = await supabase.auth.getUser();
+        data: { session },
+        error,
+      } = await supabase.auth.getSession();
 
-      if (user) {
-        const name =
-          user.user_metadata?.full_name ||
-          user.user_metadata?.name ||
-          user.email?.split("@")[0] ||
-          "User";
+      if (error) {
+        console.error("Auth session error:", error);
 
-        setUserName(name);
+        if (mounted) {
+          router.replace("/login");
+        }
+
+        return;
       }
-    };
 
-    getUser();
+      // Jika tidak ada session berarti belum login
+      if (!session?.user) {
+        if (mounted) {
+          router.replace("/login");
+        }
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
+        return;
+      }
+
+      // User valid dan sudah login
+      if (mounted) {
         const name =
           session.user.user_metadata?.full_name ||
           session.user.user_metadata?.name ||
@@ -64,15 +71,39 @@ export default function SystemPage() {
           "User";
 
         setUserName(name);
-      } else {
-        setUserName("User");
+      }
+    };
+
+    checkAuth();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session?.user) {
+        if (mounted) {
+          router.replace("/login");
+          setUserName("User");
+        }
+
+        return;
+      }
+
+      if (mounted) {
+        const name =
+          session.user.user_metadata?.full_name ||
+          session.user.user_metadata?.name ||
+          session.user.email?.split("@")[0] ||
+          "User";
+
+        setUserName(name);
       }
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [router]);
 
   /* ====================================================== */
   /* ======================= LOGOUT ======================= */
@@ -86,7 +117,7 @@ export default function SystemPage() {
       return;
     }
 
-    router.push("/login");
+    router.replace("/login");
   };
 
   return (
@@ -495,7 +526,6 @@ export default function SystemPage() {
                   </span>
                 </button>
 
-
                 {/* OUTBOUND */}
 
                 <button
@@ -554,7 +584,6 @@ export default function SystemPage() {
                     ›
                   </span>
                 </button>
-
 
                 {/* INVENTORY */}
 
@@ -615,10 +644,7 @@ export default function SystemPage() {
                   </span>
                 </button>
 
-
-                {/* ================================================== */}
-                {/* ================= COUNTING ======================= */}
-                {/* ================================================== */}
+                {/* COUNTING */}
 
                 <button
                   type="button"
@@ -686,7 +712,6 @@ export default function SystemPage() {
               </p>
             </>
           )}
-
 
           {/* ================================================== */}
           {/* ================= INBOUND MOBILE ================= */}
@@ -788,7 +813,6 @@ export default function SystemPage() {
                   </span>
                 </button>
 
-
                 {/* PUTAWAY */}
 
                 <button
@@ -878,7 +902,6 @@ export default function SystemPage() {
               </button>
             </>
           )}
-
 
           {/* ================================================== */}
           {/* ================= OUTBOUND MOBILE ================ */}
@@ -980,7 +1003,6 @@ export default function SystemPage() {
                   </span>
                 </button>
 
-
                 {/* PACKING */}
 
                 <button
@@ -1070,7 +1092,6 @@ export default function SystemPage() {
               </button>
             </>
           )}
-
 
           {/* ================================================== */}
           {/* ================= INVENTORY MOBILE =============== */}
@@ -1204,7 +1225,6 @@ export default function SystemPage() {
             </>
           )}
 
-
           {/* ================================================== */}
           {/* ================= COUNTING MOBILE ================ */}
           {/* ================================================== */}
@@ -1246,7 +1266,6 @@ export default function SystemPage() {
                 </p>
 
               </div>
-
 
               {/* ================= COUNTING SUBMENU ================= */}
 
@@ -1310,7 +1329,6 @@ export default function SystemPage() {
                   </span>
                 </button>
 
-
                 {/* ================= SECOND COUNT ================= */}
 
                 <button
@@ -1368,7 +1386,6 @@ export default function SystemPage() {
                     ›
                   </span>
                 </button>
-
 
                 {/* ================= THIRD COUNT ================= */}
 
@@ -1429,7 +1446,6 @@ export default function SystemPage() {
                 </button>
 
               </div>
-
 
               {/* ================= BACK ================= */}
 
