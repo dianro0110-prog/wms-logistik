@@ -143,10 +143,10 @@ const handleLogout = async () => {
     </Link>
 
     <Link
-      href="/categories"
+      href="/customer"
       className="block px-3 py-2 hover:bg-slate-300 rounded"
     >
-      Category
+      Customers
     </Link>
   </div>
 )}
