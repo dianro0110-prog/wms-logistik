@@ -1,15 +1,20 @@
-
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeftCircle,
-  RefreshCw,
+  RefreshCcw,
   Search,
+  Printer,
+  FileSpreadsheet,
+  ChevronLeft,
+  ChevronRight,
   FileText,
+  X,
 } from "lucide-react";
 import { supabase } from "../../../lib/supabase";
+import * as XLSX from "xlsx";
 
 type CheckingDetail = {
   id: number;
@@ -18,11 +23,7 @@ type CheckingDetail = {
   sku: string;
   quantity: number;
   deskripsi?: string | null;
-
-  // User yang melakukan checking
   checked_by?: string | null;
-
-  // Waktu checking
   checked_at?: string | null;
 };
 
@@ -34,19 +35,40 @@ type Product = {
 export default function CheckingReportPage() {
   const router = useRouter();
 
+  // ============================
+  // STATE
+  // ============================
+
   const [data, setData] = useState<CheckingDetail[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const [selectedRow, setSelectedRow] =
+    useState<CheckingDetail | null>(null);
+
+  const [showDetail, setShowDetail] =
+    useState(false);
+
+  const [search, setSearch] = useState("");
 
   const [selectedReceiving, setSelectedReceiving] =
     useState("");
 
-  const [search, setSearch] = useState("");
+  const [checker, setChecker] = useState("");
+
+  const [dateFrom, setDateFrom] = useState("");
+
+  const [dateTo, setDateTo] = useState("");
+
+  const [page, setPage] = useState(1);
+
+  const pageSize = 10;
 
   // ============================
   // CLEAN VALUE
   // ============================
+
   function clean(value: any) {
     return (value ?? "")
       .toString()
@@ -55,68 +77,87 @@ export default function CheckingReportPage() {
   }
 
   // ============================
-  // LOAD CHECKING REPORT
+  // LOAD CHECKING
   // ============================
+
   async function loadCheckingReport() {
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    const { data: checkingData, error } = await supabase
-      .from("checking_details")
-      .select(`
-        id,
-        receiving_id,
-        receiving_no,
-        sku,
-        quantity,
-        deskripsi,
-        checked_by,
-        checked_at
-      `)
-      .order("checked_at", {
-        ascending: false,
-      });
+      const { data: checkingData, error } =
+        await supabase
+          .from("checking_details")
+          .select(`
+            id,
+            receiving_id,
+            receiving_no,
+            sku,
+            quantity,
+            deskripsi,
+            checked_by,
+            checked_at
+          `)
+          .order("checked_at", {
+            ascending: false,
+          });
 
-    if (error) {
+      if (error) {
+        console.error(
+          "Checking report error:",
+          error
+        );
+
+        alert(
+          `Gagal mengambil data checking: ${error.message}`
+        );
+
+        return;
+      }
+
+      setData(checkingData || []);
+    } catch (error) {
       console.error(
-        "Checking report error:",
+        "Load checking error:",
         error
       );
-
-      alert(
-        `Gagal mengambil data checking: ${error.message}`
-      );
-
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setData(checkingData || []);
-
-    setLoading(false);
   }
 
   // ============================
   // LOAD PRODUCTS
   // ============================
-  async function loadProducts() {
-    const { data, error } = await supabase
-      .from("product")
-      .select("sku, deskripsi");
 
-    if (error) {
+  async function loadProducts() {
+    try {
+      const { data, error } =
+        await supabase
+          .from("product")
+          .select("sku, deskripsi");
+
+      if (error) {
+        console.error(
+          "Product error:",
+          error
+        );
+
+        return;
+      }
+
+      setProducts(data || []);
+    } catch (error) {
       console.error(
-        "Product error:",
+        "Load product error:",
         error
       );
-      return;
     }
-
-    setProducts(data || []);
   }
 
   // ============================
   // INITIAL LOAD
   // ============================
+
   useEffect(() => {
     loadCheckingReport();
     loadProducts();
@@ -125,84 +166,30 @@ export default function CheckingReportPage() {
   // ============================
   // GET DESCRIPTION
   // ============================
+
   function getDescription(
     row: CheckingDetail
   ) {
-    if (row.deskripsi) {
+    if (
+      row.deskripsi &&
+      row.deskripsi.trim() !== ""
+    ) {
       return row.deskripsi;
     }
 
     const product = products.find(
-      (p) =>
-        clean(p.sku) === clean(row.sku)
+      (item) =>
+        clean(item.sku) ===
+        clean(row.sku)
     );
 
     return product?.deskripsi || "-";
   }
 
   // ============================
-  // RECEIVING LIST
-  // ============================
-  const receivingList = useMemo(() => {
-    const values = data
-      .map((item) => item.receiving_no)
-      .filter(Boolean);
-
-    return Array.from(
-      new Set(values)
-    ).sort();
-  }, [data]);
-
-  // ============================
-  // FILTER DATA
-  // ============================
-  const filteredData = useMemo(() => {
-    return data.filter((item) => {
-      const matchReceiving =
-        !selectedReceiving ||
-        item.receiving_no ===
-          selectedReceiving;
-
-      const keyword =
-        search.trim().toLowerCase();
-
-      const matchSearch =
-        !keyword ||
-        clean(item.sku).includes(keyword) ||
-        clean(
-          getDescription(item)
-        ).includes(keyword) ||
-        clean(
-          item.checked_by
-        ).includes(keyword);
-
-      return (
-        matchReceiving &&
-        matchSearch
-      );
-    });
-  }, [
-    data,
-    selectedReceiving,
-    search,
-    products,
-  ]);
-
-  // ============================
-  // TOTAL QTY
-  // ============================
-  const totalQty = useMemo(() => {
-    return filteredData.reduce(
-      (sum, item) =>
-        sum +
-        Number(item.quantity || 0),
-      0
-    );
-  }, [filteredData]);
-
-  // ============================
   // FORMAT DATE
   // ============================
+
   function formatDate(
     value?: string | null
   ) {
@@ -230,115 +217,645 @@ export default function CheckingReportPage() {
   }
 
   // ============================
-  // REFRESH
+  // RECEIVING LIST
   // ============================
-  async function refresh() {
-    await loadCheckingReport();
+
+  const receivingList = useMemo(() => {
+    const values = data
+      .map(
+        (item) =>
+          item.receiving_no
+      )
+      .filter(Boolean);
+
+    return Array.from(
+      new Set(values)
+    ).sort();
+  }, [data]);
+
+  // ============================
+  // CHECKER LIST
+  // ============================
+
+  const checkerList = useMemo(() => {
+    const values = data
+      .map(
+        (item) =>
+          item.checked_by
+      )
+      .filter(Boolean) as string[];
+
+    return Array.from(
+      new Set(values)
+    ).sort();
+  }, [data]);
+
+  // ============================
+  // FILTER
+  // ============================
+
+  const filteredData = useMemo(() => {
+    return data.filter((item) => {
+      const keyword =
+        search.trim().toLowerCase();
+
+      const description =
+        getDescription(item);
+
+      const matchSearch =
+        !keyword ||
+        clean(item.receiving_no).includes(
+          keyword
+        ) ||
+        clean(item.sku).includes(
+          keyword
+        ) ||
+        clean(description).includes(
+          keyword
+        ) ||
+        clean(item.checked_by).includes(
+          keyword
+        );
+
+      const matchReceiving =
+        selectedReceiving === "" ||
+        item.receiving_no ===
+          selectedReceiving;
+
+      const matchChecker =
+        checker === "" ||
+        item.checked_by === checker;
+
+      const checkedDate =
+        item.checked_at
+          ? item.checked_at.slice(0, 10)
+          : "";
+
+      const matchDateFrom =
+        dateFrom === ""
+          ? true
+          : checkedDate >= dateFrom;
+
+      const matchDateTo =
+        dateTo === ""
+          ? true
+          : checkedDate <= dateTo;
+
+      return (
+        matchSearch &&
+        matchReceiving &&
+        matchChecker &&
+        matchDateFrom &&
+        matchDateTo
+      );
+    });
+  }, [
+    data,
+    products,
+    search,
+    selectedReceiving,
+    checker,
+    dateFrom,
+    dateTo,
+  ]);
+
+  // ============================
+  // RESET PAGE WHEN FILTER CHANGE
+  // ============================
+
+  useEffect(() => {
+    setPage(1);
+  }, [
+    search,
+    selectedReceiving,
+    checker,
+    dateFrom,
+    dateTo,
+  ]);
+
+  // ============================
+  // SUMMARY
+  // ============================
+
+  const totalChecking =
+    filteredData.length;
+
+  const totalQty = filteredData.reduce(
+    (sum, item) =>
+      sum + Number(item.quantity || 0),
+    0
+  );
+
+  const totalReceiving = new Set(
+    filteredData.map(
+      (item) =>
+        item.receiving_no
+    )
+  ).size;
+
+  const totalChecker = new Set(
+    filteredData
+      .map(
+        (item) =>
+          item.checked_by
+      )
+      .filter(Boolean)
+  ).size;
+
+  // ============================
+  // PAGINATION
+  // ============================
+
+  const totalPages = Math.ceil(
+    filteredData.length / pageSize
+  );
+
+  const currentRows =
+    filteredData.slice(
+      (page - 1) * pageSize,
+      page * pageSize
+    );
+
+  // ============================
+  // RESET FILTER
+  // ============================
+
+  function resetFilter() {
+    setSearch("");
+    setSelectedReceiving("");
+    setChecker("");
+    setDateFrom("");
+    setDateTo("");
   }
 
+  // ============================
+  // REFRESH
+  // ============================
+
+  async function refresh() {
+    await loadCheckingReport();
+    await loadProducts();
+  }
+
+  // ============================
+  // EXPORT EXCEL
+  // ============================
+
+  function exportExcel() {
+    if (filteredData.length === 0) {
+      alert(
+        "Tidak ada data untuk diexport."
+      );
+
+      return;
+    }
+
+    const exportData =
+      filteredData.map(
+        (item, index) => ({
+          No: index + 1,
+
+          "Receiving No":
+            item.receiving_no,
+
+          SKU: item.sku,
+
+          Deskripsi:
+            getDescription(item),
+
+          Qty: item.quantity,
+
+          Checker:
+            item.checked_by || "-",
+
+          "Waktu Checking":
+            formatDate(
+              item.checked_at
+            ),
+        })
+      );
+
+    const worksheet =
+      XLSX.utils.json_to_sheet(
+        exportData
+      );
+
+    const workbook =
+      XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      "Checking Report"
+    );
+
+    XLSX.writeFile(
+      workbook,
+      `Checking_Report_${
+        new Date()
+          .toISOString()
+          .slice(0, 10)
+      }.xlsx`
+    );
+  }
+
+  // ============================
+  // PRINT
+  // ============================
+
+  function printReport() {
+    window.print();
+  }
+
+  // ============================
+  // OPEN DETAIL
+  // ============================
+
+  function openDetail(
+    row: CheckingDetail
+  ) {
+    setSelectedRow(row);
+    setShowDetail(true);
+  }
+
+  // ============================
+  // CLOSE DETAIL
+  // ============================
+
+  function closeDetail() {
+    setShowDetail(false);
+    setSelectedRow(null);
+  }
+
+  // ============================
+  // RETURN UI
+  // ============================
+
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
+    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
 
-      <div className="max-w-7xl mx-auto space-y-5">
+      {/* ================= HEADER ================= */}
 
-        {/* ================= HEADER ================= */}
-        <div className="bg-white border rounded-xl p-4 shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
 
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex items-center gap-3">
 
-            <div className="flex items-center gap-3">
+          <button
+            onClick={() =>
+              router.back()
+            }
+            className="
+              flex
+              items-center
+              gap-2
+              bg-gray-600
+              hover:bg-gray-700
+              text-white
+              px-4
+              py-2
+              rounded-lg
+              transition
+            "
+          >
+            <ArrowLeftCircle
+              size={18}
+            />
 
-              <button
-                onClick={() =>
-                  router.back()
-                }
-                className="
-                  flex
-                  items-center
-                  gap-2
-                  bg-gray-600
-                  hover:bg-gray-700
-                  text-white
-                  px-3
-                  py-2
-                  rounded-lg
-                  transition
-                "
-              >
-                <ArrowLeftCircle
-                  size={19}
-                />
+            Back
+          </button>
 
-                <span>
-                  Back
-                </span>
-              </button>
+          <div>
 
-              <div>
-                <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
 
-                  <FileText
-                    size={24}
-                    className="text-blue-600"
-                  />
+              <FileText
+                size={26}
+                className="text-blue-600"
+              />
 
-                  <h1 className="text-xl md:text-2xl font-bold">
-                    Checking Report
-                  </h1>
-
-                </div>
-
-                <p className="text-sm text-gray-500 mt-1">
-                  Report hasil checking inbound
-                </p>
-              </div>
+              <h1 className="text-3xl font-bold text-gray-800">
+                Checking Report
+              </h1>
 
             </div>
 
-            {/* REFRESH */}
-            <button
-              onClick={refresh}
-              disabled={loading}
-              className="
-                flex
-                items-center
-                justify-center
-                gap-2
-                bg-blue-600
-                hover:bg-blue-700
-                disabled:bg-gray-400
-                text-white
-                px-4
-                py-2
-                rounded-lg
-              "
-            >
-              <RefreshCw
-                size={18}
-                className={
-                  loading
-                    ? "animate-spin"
-                    : ""
-                }
-              />
-
-              Refresh
-            </button>
+            <p className="text-gray-500 mt-1">
+              Laporan hasil Checking Warehouse
+            </p>
 
           </div>
 
         </div>
 
-        {/* ================= FILTER ================= */}
-        <div className="bg-white border rounded-xl p-4 shadow-sm">
+        {/* ACTION BUTTON */}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="flex flex-wrap gap-2">
 
-            {/* RECEIVING */}
-            <select
-              value={selectedReceiving}
+          <button
+            onClick={refresh}
+            disabled={loading}
+            className="
+              flex
+              items-center
+              gap-2
+              bg-blue-600
+              hover:bg-blue-700
+              disabled:bg-gray-400
+              text-white
+              px-4
+              py-2
+              rounded-lg
+              transition
+            "
+          >
+
+            <RefreshCcw
+              size={18}
+              className={
+                loading
+                  ? "animate-spin"
+                  : ""
+              }
+            />
+
+            Refresh
+
+          </button>
+
+          <button
+            onClick={exportExcel}
+            className="
+              flex
+              items-center
+              gap-2
+              bg-green-600
+              hover:bg-green-700
+              text-white
+              px-4
+              py-2
+              rounded-lg
+              transition
+            "
+          >
+
+            <FileSpreadsheet
+              size={18}
+            />
+
+            Export Excel
+
+          </button>
+
+          <button
+            onClick={printReport}
+            className="
+              flex
+              items-center
+              gap-2
+              bg-gray-700
+              hover:bg-gray-800
+              text-white
+              px-4
+              py-2
+              rounded-lg
+              transition
+            "
+          >
+
+            <Printer
+              size={18}
+            />
+
+            Print
+
+          </button>
+
+        </div>
+
+      </div>
+
+      {/* ================= SUMMARY ================= */}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+
+        {/* TOTAL CHECKING */}
+
+        <div className="bg-white rounded-xl shadow p-5">
+
+          <p className="text-gray-500 text-sm">
+            Total Checking
+          </p>
+
+          <h2 className="text-3xl font-bold text-blue-600 mt-2">
+            {totalChecking}
+          </h2>
+
+        </div>
+
+        {/* TOTAL QTY */}
+
+        <div className="bg-white rounded-xl shadow p-5">
+
+          <p className="text-gray-500 text-sm">
+            Total Qty Checking
+          </p>
+
+          <h2 className="text-3xl font-bold text-green-600 mt-2">
+            {totalQty}
+          </h2>
+
+        </div>
+
+        {/* TOTAL RECEIVING */}
+
+        <div className="bg-white rounded-xl shadow p-5">
+
+          <p className="text-gray-500 text-sm">
+            Total Receiving
+          </p>
+
+          <h2 className="text-3xl font-bold text-purple-600 mt-2">
+            {totalReceiving}
+          </h2>
+
+        </div>
+
+        {/* TOTAL CHECKER */}
+
+        <div className="bg-white rounded-xl shadow p-5">
+
+          <p className="text-gray-500 text-sm">
+            Total Checker
+          </p>
+
+          <h2 className="text-3xl font-bold text-orange-600 mt-2">
+            {totalChecker}
+          </h2>
+
+        </div>
+
+      </div>
+
+      {/* ================= FILTER ================= */}
+
+      <div className="bg-white rounded-xl shadow p-5">
+
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+
+          {/* SEARCH */}
+
+          <div className="relative lg:col-span-2">
+
+            <Search
+              size={18}
+              className="
+                absolute
+                left-3
+                top-3
+                text-gray-400
+              "
+            />
+
+            <input
+              type="text"
+              placeholder="Cari Receiving / SKU / Deskripsi / Checker"
+              value={search}
               onChange={(e) =>
-                setSelectedReceiving(
+                setSearch(
+                  e.target.value
+                )
+              }
+              className="
+                w-full
+                border
+                rounded-lg
+                pl-10
+                pr-3
+                py-2
+                focus:outline-none
+                focus:ring-2
+                focus:ring-blue-500
+              "
+            />
+
+          </div>
+
+          {/* RECEIVING */}
+
+          <select
+            value={selectedReceiving}
+            onChange={(e) =>
+              setSelectedReceiving(
+                e.target.value
+              )
+            }
+            className="
+              border
+              rounded-lg
+              px-3
+              py-2
+              focus:outline-none
+              focus:ring-2
+              focus:ring-blue-500
+            "
+          >
+
+            <option value="">
+              Semua Receiving
+            </option>
+
+            {receivingList.map(
+              (item) => (
+
+                <option
+                  key={item}
+                  value={item}
+                >
+                  {item}
+                </option>
+
+              )
+            )}
+
+          </select>
+
+          {/* CHECKER */}
+
+          <select
+            value={checker}
+            onChange={(e) =>
+              setChecker(
+                e.target.value
+              )
+            }
+            className="
+              border
+              rounded-lg
+              px-3
+              py-2
+              focus:outline-none
+              focus:ring-2
+              focus:ring-blue-500
+            "
+          >
+
+            <option value="">
+              Semua Checker
+            </option>
+
+            {checkerList.map(
+              (item) => (
+
+                <option
+                  key={item}
+                  value={item}
+                >
+                  {item}
+                </option>
+
+              )
+            )}
+
+          </select>
+
+          {/* DATE FROM */}
+
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) =>
+              setDateFrom(
+                e.target.value
+              )
+            }
+            className="
+              border
+              rounded-lg
+              px-3
+              py-2
+              focus:outline-none
+              focus:ring-2
+              focus:ring-blue-500
+            "
+          />
+
+        </div>
+
+        {/* SECOND FILTER ROW */}
+
+        <div className="flex flex-col md:flex-row md:justify-between gap-3 mt-4">
+
+          <div className="flex items-center gap-2">
+
+            <label className="text-sm text-gray-500 whitespace-nowrap">
+              Sampai tanggal:
+            </label>
+
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) =>
+                setDateTo(
                   e.target.value
                 )
               }
@@ -347,253 +864,561 @@ export default function CheckingReportPage() {
                 rounded-lg
                 px-3
                 py-2
-                w-full
                 focus:outline-none
                 focus:ring-2
                 focus:ring-blue-500
               "
-            >
-              <option value="">
-                Semua Receiving
-              </option>
+            />
 
-              {receivingList.map(
-                (receiving) => (
-                  <option
-                    key={receiving}
-                    value={receiving}
-                  >
-                    {receiving}
-                  </option>
-                )
-              )}
-            </select>
+          </div>
 
-            {/* SEARCH */}
-            <div className="relative">
+          <button
+            onClick={resetFilter}
+            className="
+              bg-red-500
+              hover:bg-red-600
+              text-white
+              px-5
+              py-2
+              rounded-lg
+              transition
+            "
+          >
+            Reset Filter
+          </button>
 
-              <Search
-                size={18}
-                className="
-                  absolute
-                  left-3
-                  top-1/2
-                  -translate-y-1/2
-                  text-gray-400
-                "
+        </div>
+
+      </div>
+
+      {/* ================= TABLE ================= */}
+
+      <div className="bg-white rounded-xl shadow overflow-x-auto">
+
+        {loading ? (
+
+          <div className="p-10 text-center">
+
+            <div className="flex justify-center items-center gap-2 text-gray-500">
+
+              <RefreshCcw
+                size={20}
+                className="animate-spin"
               />
 
-              <input
-                value={search}
-                onChange={(e) =>
-                  setSearch(
-                    e.target.value
-                  )
-                }
-                placeholder="Cari SKU, deskripsi, atau user..."
-                className="
-                  border
-                  rounded-lg
-                  pl-10
-                  pr-3
-                  py-2
-                  w-full
-                  focus:outline-none
-                  focus:ring-2
-                  focus:ring-blue-500
-                "
-              />
+              Loading data...
 
             </div>
 
           </div>
 
-        </div>
+        ) : (
 
-        {/* ================= SUMMARY ================= */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <table className="min-w-full text-sm">
 
-          <div className="bg-white border rounded-xl p-4 shadow-sm">
+            <thead className="bg-blue-600 text-white">
 
-            <p className="text-sm text-gray-500">
-              Total Baris
-            </p>
+              <tr>
 
-            <p className="text-2xl font-bold mt-1">
-              {filteredData.length}
-            </p>
+                <th className="px-4 py-3 text-center">
+                  No
+                </th>
 
-          </div>
+                <th className="px-4 py-3">
+                  Checking Date
+                </th>
 
-          <div className="bg-white border rounded-xl p-4 shadow-sm">
+                <th className="px-4 py-3">
+                  Receiving No
+                </th>
 
-            <p className="text-sm text-gray-500">
-              Total Qty Checking
-            </p>
+                <th className="px-4 py-3">
+                  SKU
+                </th>
 
-            <p className="text-2xl font-bold mt-1">
-              {totalQty}
-            </p>
+                <th className="px-4 py-3">
+                  Deskripsi
+                </th>
 
-          </div>
+                <th className="px-4 py-3 text-center">
+                  Qty Checking
+                </th>
 
-          <div className="bg-white border rounded-xl p-4 shadow-sm">
+                <th className="px-4 py-3">
+                  Checker
+                </th>
 
-            <p className="text-sm text-gray-500">
-              Receiving
-            </p>
+              </tr>
 
-            <p className="text-2xl font-bold mt-1">
-              {selectedReceiving
-                ? selectedReceiving
-                : receivingList.length}
-            </p>
+            </thead>
 
-          </div>
+            <tbody>
 
-        </div>
+              {currentRows.length === 0 ? (
 
-        {/* ================= TABLE ================= */}
-        <div className="bg-white border rounded-xl shadow-sm overflow-hidden">
+                <tr>
 
-          <div className="overflow-x-auto">
-
-            <table className="w-full text-sm">
-
-              <thead>
-
-                <tr className="bg-gray-100">
-
-                  <th className="border p-3 text-left">
-                    No
-                  </th>
-
-                  <th className="border p-3 text-left">
-                    Receiving No
-                  </th>
-
-                  <th className="border p-3 text-left">
-                    SKU
-                  </th>
-
-                  <th className="border p-3 text-left">
-                    Deskripsi
-                  </th>
-
-                  <th className="border p-3 text-right">
-                    Qty
-                  </th>
-
-                  <th className="border p-3 text-left">
-                    Checker
-                  </th>
-
-                  <th className="border p-3 text-left whitespace-nowrap">
-                    Waktu Checking
-                  </th>
+                  <td
+                    colSpan={7}
+                    className="
+                      text-center
+                      py-10
+                      text-gray-500
+                    "
+                  >
+                    Tidak ada data checking.
+                  </td>
 
                 </tr>
 
-              </thead>
+              ) : (
 
-              <tbody>
+                currentRows.map(
+                  (row, index) => (
 
-                {loading ? (
-
-                  <tr>
-
-                    <td
-                      colSpan={7}
-                      className="border p-8 text-center"
+                    <tr
+                      key={row.id}
+                      onClick={() =>
+                        openDetail(row)
+                      }
+                      className="
+                        border-b
+                        hover:bg-blue-50
+                        cursor-pointer
+                        transition
+                      "
                     >
-                      <div className="flex justify-center items-center gap-2 text-gray-500">
 
-                        <RefreshCw
-                          size={18}
-                          className="animate-spin"
-                        />
+                      {/* NO */}
 
-                        Loading data...
+                      <td className="px-4 py-3 text-center">
 
-                      </div>
-                    </td>
+                        {(page - 1) *
+                          pageSize +
+                          index +
+                          1}
 
-                  </tr>
+                      </td>
 
-                ) : filteredData.length === 0 ? (
+                      {/* DATE */}
 
-                  <tr>
+                      <td className="px-4 py-3 whitespace-nowrap">
 
-                    <td
-                      colSpan={7}
-                      className="border p-8 text-center text-gray-500"
-                    >
-                      Tidak ada data checking
-                    </td>
+                        {formatDate(
+                          row.checked_at
+                        )}
 
-                  </tr>
+                      </td>
 
-                ) : (
+                      {/* RECEIVING */}
 
-                  filteredData.map(
-                    (item, index) => (
+                      <td className="px-4 py-3 font-medium">
 
-                      <tr
-                        key={item.id}
-                        className="hover:bg-gray-50"
-                      >
+                        {row.receiving_no}
 
-                        <td className="border p-3">
-                          {index + 1}
-                        </td>
+                      </td>
 
-                        <td className="border p-3 font-medium">
-                          {item.receiving_no}
-                        </td>
+                      {/* SKU */}
 
-                        <td className="border p-3 font-mono">
-                          {item.sku}
-                        </td>
+                      <td className="px-4 py-3">
 
-                        <td className="border p-3">
-                          {getDescription(
-                            item
-                          )}
-                        </td>
+                        {row.sku}
 
-                        <td className="border p-3 text-right font-semibold">
-                          {Number(
-                            item.quantity || 0
-                          )}
-                        </td>
+                      </td>
 
-                        <td className="border p-3">
-                          {item.checked_by ||
-                            "-"}
-                        </td>
+                      {/* DESCRIPTION */}
 
-                        <td className="border p-3 whitespace-nowrap">
-                          {formatDate(
-                            item.checked_at
-                          )}
-                        </td>
+                      <td className="px-4 py-3">
 
-                      </tr>
+                        {getDescription(
+                          row
+                        )}
 
-                    )
+                      </td>
+
+                      {/* QTY */}
+
+                      <td className="
+                        px-4
+                        py-3
+                        text-center
+                        font-semibold
+                        text-blue-600
+                      ">
+
+                        {Number(
+                          row.quantity || 0
+                        )}
+
+                      </td>
+
+                      {/* CHECKER */}
+
+                      <td className="px-4 py-3">
+
+                        {row.checked_by ||
+                          "-"}
+
+                      </td>
+
+                    </tr>
+
                   )
+                )
 
-                )}
+              )}
 
-              </tbody>
+            </tbody>
 
-            </table>
+          </table>
 
-          </div>
+        )}
+
+      </div>
+
+      {/* ================= PAGINATION ================= */}
+
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+
+        <div className="text-sm text-gray-500">
+
+          Total Data :{" "}
+          {filteredData.length}
+
+        </div>
+
+        <div className="flex items-center gap-2">
+
+          <button
+            disabled={page === 1}
+            onClick={() =>
+              setPage(
+                (p) => p - 1
+              )
+            }
+            className="
+              flex
+              items-center
+              gap-1
+              px-3
+              py-2
+              rounded
+              bg-gray-200
+              hover:bg-gray-300
+              disabled:opacity-40
+              disabled:cursor-not-allowed
+            "
+          >
+
+            <ChevronLeft
+              size={18}
+            />
+
+            Previous
+
+          </button>
+
+          <span className="px-4 text-sm">
+
+            Page {page} of{" "}
+            {totalPages || 1}
+
+          </span>
+
+          <button
+            disabled={
+              page >= totalPages
+            }
+            onClick={() =>
+              setPage(
+                (p) => p + 1
+              )
+            }
+            className="
+              flex
+              items-center
+              gap-1
+              px-3
+              py-2
+              rounded
+              bg-gray-200
+              hover:bg-gray-300
+              disabled:opacity-40
+              disabled:cursor-not-allowed
+            "
+          >
+
+            Next
+
+            <ChevronRight
+              size={18}
+            />
+
+          </button>
 
         </div>
 
       </div>
+
+      {/* ================= DETAIL MODAL ================= */}
+
+      {showDetail &&
+        selectedRow && (
+
+          <div className="
+            fixed
+            inset-0
+            bg-black/40
+            flex
+            justify-center
+            items-center
+            z-50
+            p-4
+          ">
+
+            <div className="
+              bg-white
+              rounded-xl
+              shadow-xl
+              w-full
+              max-w-2xl
+              max-h-[90vh]
+              overflow-y-auto
+            ">
+
+              {/* MODAL HEADER */}
+
+              <div className="
+                flex
+                justify-between
+                items-center
+                border-b
+                p-5
+              ">
+
+                <div>
+
+                  <div className="flex items-center gap-2">
+
+                    <FileText
+                      size={22}
+                      className="text-blue-600"
+                    />
+
+                    <h2 className="text-xl font-bold">
+
+                      Detail Checking
+
+                    </h2>
+
+                  </div>
+
+                  <p className="text-sm text-gray-500 mt-1">
+
+                    Detail hasil checking inbound
+
+                  </p>
+
+                </div>
+
+                <button
+                  onClick={
+                    closeDetail
+                  }
+                  className="
+                    p-2
+                    rounded-lg
+                    hover:bg-gray-100
+                    transition
+                  "
+                >
+
+                  <X
+                    size={22}
+                  />
+
+                </button>
+
+              </div>
+
+              {/* MODAL BODY */}
+
+              <div className="p-6 space-y-5">
+
+                <div className="
+                  grid
+                  grid-cols-1
+                  md:grid-cols-2
+                  gap-5
+                ">
+
+                  {/* RECEIVING */}
+
+                  <div>
+
+                    <label className="
+                      text-gray-500
+                      text-sm
+                    ">
+                      Receiving No
+                    </label>
+
+                    <div className="
+                      font-semibold
+                      mt-1
+                    ">
+                      {selectedRow.receiving_no}
+                    </div>
+
+                  </div>
+
+                  {/* CHECKER */}
+
+                  <div>
+
+                    <label className="
+                      text-gray-500
+                      text-sm
+                    ">
+                      Checker
+                    </label>
+
+                    <div className="
+                      font-semibold
+                      mt-1
+                    ">
+                      {selectedRow.checked_by ||
+                        "-"}
+                    </div>
+
+                  </div>
+
+                  {/* SKU */}
+
+                  <div>
+
+                    <label className="
+                      text-gray-500
+                      text-sm
+                    ">
+                      SKU
+                    </label>
+
+                    <div className="
+                      font-semibold
+                      mt-1
+                    ">
+                      {selectedRow.sku}
+                    </div>
+
+                  </div>
+
+                  {/* QTY */}
+
+                  <div>
+
+                    <label className="
+                      text-gray-500
+                      text-sm
+                    ">
+                      Qty Checking
+                    </label>
+
+                    <div className="
+                      font-semibold
+                      text-blue-600
+                      text-lg
+                      mt-1
+                    ">
+                      {Number(
+                        selectedRow.quantity ||
+                          0
+                      )}
+                    </div>
+
+                  </div>
+
+                  {/* DESCRIPTION */}
+
+                  <div className="md:col-span-2">
+
+                    <label className="
+                      text-gray-500
+                      text-sm
+                    ">
+                      Description
+                    </label>
+
+                    <div className="
+                      font-semibold
+                      mt-1
+                    ">
+                      {getDescription(
+                        selectedRow
+                      )}
+                    </div>
+
+                  </div>
+
+                  {/* CHECKED AT */}
+
+                  <div className="md:col-span-2">
+
+                    <label className="
+                      text-gray-500
+                      text-sm
+                    ">
+                      Checked At
+                    </label>
+
+                    <div className="
+                      font-semibold
+                      mt-1
+                    ">
+                      {formatDate(
+                        selectedRow.checked_at
+                      )}
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+              {/* MODAL FOOTER */}
+
+              <div className="
+                border-t
+                p-5
+                flex
+                justify-end
+              ">
+
+                <button
+                  onClick={
+                    closeDetail
+                  }
+                  className="
+                    bg-blue-600
+                    hover:bg-blue-700
+                    text-white
+                    px-5
+                    py-2
+                    rounded-lg
+                    transition
+                  "
+                >
+                  Close
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        )}
 
     </div>
   );
