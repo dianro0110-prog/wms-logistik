@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -15,8 +16,6 @@ import {
   ScanLine,
   RefreshCw,
   Clock3,
-  Package,
-  Boxes,
 } from "lucide-react";
 import { supabase } from "../../../../lib/supabase";
 
@@ -82,49 +81,34 @@ export default function PackingPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const [customerName, setCustomerName] =
-    useState("");
+  const [customerName, setCustomerName] = useState("");
 
-  const [items, setItems] = useState<PackingItem[]>(
-    []
-  );
+  const [items, setItems] = useState<PackingItem[]>([]);
 
   // SKU yang dipilih dari hasil picking order ini
-  const [selectedSku, setSelectedSku] =
-    useState("");
+  const [selectedSku, setSelectedSku] = useState("");
 
-  // Scan SKU
-  const [scanSku, setScanSku] =
-    useState("");
+  // Input SKU / Scanner untuk memilih SKU
+  const [skuSearch, setSkuSearch] = useState("");
 
-  const [skuValidated, setSkuValidated] =
-    useState(false);
+  // Scan SKU kedua untuk validasi
+  const [scanSku, setScanSku] = useState("");
+
+  const [skuValidated, setSkuValidated] = useState(false);
 
   // Packing form
-  const [cartonNo, setCartonNo] =
-    useState("");
-
-  const [packQty, setPackQty] =
-    useState("");
-
-  const [weight, setWeight] =
-    useState("");
+  const [cartonNo, setCartonNo] = useState("");
+  const [packQty, setPackQty] = useState("");
+  const [weight, setWeight] = useState("");
 
   // Status
-  const [pickingComplete, setPickingComplete] =
-    useState(false);
+  const [pickingComplete, setPickingComplete] = useState(false);
 
-  const [totalAllocated, setTotalAllocated] =
-    useState(0);
+  const [totalAllocated, setTotalAllocated] = useState(0);
+  const [totalPicked, setTotalPicked] = useState(0);
+  const [totalPacked, setTotalPacked] = useState(0);
 
-  const [totalPicked, setTotalPicked] =
-    useState(0);
-
-  const [totalPacked, setTotalPacked] =
-    useState(0);
-
-  const [lastRefresh, setLastRefresh] =
-    useState(new Date());
+  const [lastRefresh, setLastRefresh] = useState(new Date());
 
   const loadingRef = useRef(false);
 
@@ -171,9 +155,6 @@ export default function PackingPage() {
 
         // =================================================
         // PRODUCT
-        //
-        // Hanya digunakan untuk fallback deskripsi.
-        // BUKAN sumber SKU.
         // =================================================
 
         const {
@@ -197,8 +178,7 @@ export default function PackingPage() {
 
         (productData || []).forEach(
           (product: ProductRow) => {
-            const sku =
-              normalizeSku(product.sku);
+            const sku = normalizeSku(product.sku);
 
             if (!sku) return;
 
@@ -213,8 +193,6 @@ export default function PackingPage() {
 
         // =================================================
         // ALLOCATION
-        //
-        // HANYA ORDER INI
         // =================================================
 
         const {
@@ -237,18 +215,14 @@ export default function PackingPage() {
         let allocatedTotal = 0;
         let pickedAllocationTotal = 0;
 
-        (
-          allocationData || []
-        ).forEach((row) => {
-          allocatedTotal +=
-            toNumber(
-              row.qty_allocated
-            );
+        (allocationData || []).forEach((row) => {
+          allocatedTotal += toNumber(
+            row.qty_allocated
+          );
 
-          pickedAllocationTotal +=
-            toNumber(
-              row.qty_picked
-            );
+          pickedAllocationTotal += toNumber(
+            row.qty_picked
+          );
         });
 
         setTotalAllocated(
@@ -260,23 +234,16 @@ export default function PackingPage() {
         );
 
         setPickingComplete(
-          (allocationData || []).length >
-            0 &&
+          (allocationData || []).length > 0 &&
             (allocationData || []).every(
               (row) =>
-                toNumber(
-                  row.qty_picked
-                ) >=
-                toNumber(
-                  row.qty_allocated
-                )
+                toNumber(row.qty_picked) >=
+                toNumber(row.qty_allocated)
             )
         );
 
         // =================================================
         // PICKING
-        //
-        // SKU HANYA DARI PICKING ORDER INI
         // =================================================
 
         const {
@@ -304,8 +271,6 @@ export default function PackingPage() {
 
         // =================================================
         // PACKING
-        //
-        // HANYA ORDER INI
         // =================================================
 
         const {
@@ -327,52 +292,40 @@ export default function PackingPage() {
         // GROUP PICKING BY SKU
         // =================================================
 
-        const pickedBySku =
-          new Map<
-            string,
-            {
-              sku: string;
-              deskripsi: string;
-              qty_picked: number;
-            }
-          >();
+        const pickedBySku = new Map<
+          string,
+          {
+            sku: string;
+            deskripsi: string;
+            qty_picked: number;
+          }
+        >();
 
-        (
-          pickingData || []
-        ).forEach(
+        (pickingData || []).forEach(
           (row: PickingRow) => {
-            // Pastikan benar-benar order yang sedang dibuka
             if (
-              String(
-                row.order_no || ""
-              ).trim() !==
+              String(row.order_no || "").trim() !==
               orderNo.trim()
             ) {
               return;
             }
 
-            const sku =
-              normalizeSku(row.sku);
+            const sku = normalizeSku(row.sku);
 
             if (!sku) return;
 
-            const description =
-              String(
-                row.deskripsi ||
-                  productMap.get(
-                    sku
-                  ) ||
-                  ""
-              ).trim();
+            const description = String(
+              row.deskripsi ||
+                productMap.get(sku) ||
+                ""
+            ).trim();
 
             const existing =
               pickedBySku.get(sku);
 
             if (existing) {
               existing.qty_picked +=
-                toNumber(
-                  row.qty_picked
-                );
+                toNumber(row.qty_picked);
 
               if (
                 !existing.deskripsi &&
@@ -384,12 +337,9 @@ export default function PackingPage() {
             } else {
               pickedBySku.set(sku, {
                 sku,
-                deskripsi:
-                  description,
+                deskripsi: description,
                 qty_picked:
-                  toNumber(
-                    row.qty_picked
-                  ),
+                  toNumber(row.qty_picked),
               });
             }
           }
@@ -399,25 +349,20 @@ export default function PackingPage() {
         // GROUP PACKING BY SKU
         // =================================================
 
-        const packedBySku =
-          new Map<
-            string,
-            number
-          >();
+        const packedBySku = new Map<
+          string,
+          number
+        >();
 
-        (
-          packingData || []
-        ).forEach(
+        (packingData || []).forEach(
           (row: PackingRow) => {
-            const sku =
-              normalizeSku(row.sku);
+            const sku = normalizeSku(row.sku);
 
             if (!sku) return;
 
             packedBySku.set(
               sku,
-              (packedBySku.get(sku) ||
-                0) +
+              (packedBySku.get(sku) || 0) +
                 toNumber(row.qty)
             );
           }
@@ -425,11 +370,6 @@ export default function PackingPage() {
 
         // =================================================
         // BUILD ITEMS
-        //
-        // SKU HANYA DARI PICKING
-        //
-        // Hanya SKU yang masih mempunyai sisa
-        // yang ditampilkan.
         // =================================================
 
         const result: PackingItem[] =
@@ -438,18 +378,14 @@ export default function PackingPage() {
           )
             .map((item) => {
               const packed =
-                packedBySku.get(
-                  item.sku
-                ) || 0;
+                packedBySku.get(item.sku) || 0;
 
               return {
                 sku: item.sku,
-                deskripsi:
-                  item.deskripsi,
+                deskripsi: item.deskripsi,
                 qty_picked:
                   item.qty_picked,
-                qty_packed:
-                  packed,
+                qty_packed: packed,
               };
             })
             .filter(
@@ -466,56 +402,37 @@ export default function PackingPage() {
           Array.from(
             packedBySku.values()
           ).reduce(
-            (sum, qty) =>
-              sum + qty,
+            (sum, qty) => sum + qty,
             0
           );
 
-        setTotalPacked(
-          packedTotal
-        );
+        setTotalPacked(packedTotal);
 
         setItems(result);
 
         // =================================================
         // SELECTED SKU
-        //
-        // Pertahankan SKU sebelumnya jika masih ada.
-        // Kalau sudah selesai, pindah ke SKU berikutnya.
         // =================================================
 
-        setSelectedSku(
-          (previous) => {
-            if (!previous) {
-              return (
-                result[0]?.sku || ""
-              );
-            }
-
-            const exists =
-              result.some(
-                (item) =>
-                  normalizeSku(
-                    item.sku
-                  ) ===
-                  normalizeSku(
-                    previous
-                  )
-              );
-
-            if (exists) {
-              return previous;
-            }
-
-            return (
-              result[0]?.sku || ""
-            );
+        setSelectedSku((previous) => {
+          if (!previous) {
+            return result[0]?.sku || "";
           }
-        );
 
-        setLastRefresh(
-          new Date()
-        );
+          const exists = result.some(
+            (item) =>
+              normalizeSku(item.sku) ===
+              normalizeSku(previous)
+          );
+
+          if (exists) {
+            return previous;
+          }
+
+          return result[0]?.sku || "";
+        });
+
+        setLastRefresh(new Date());
       } catch (error) {
         console.error(
           "Load packing data error:",
@@ -549,84 +466,84 @@ export default function PackingPage() {
   useEffect(() => {
     if (!orderNo) return;
 
-    const interval =
-      setInterval(() => {
-        loadData(false);
-      }, 3000);
+    const interval = setInterval(() => {
+      loadData(false);
+    }, 3000);
 
-    return () =>
-      clearInterval(interval);
+    return () => clearInterval(interval);
   }, [orderNo, loadData]);
 
   // =====================================================
   // CURRENT ITEM
   // =====================================================
 
-  const currentItem =
-    useMemo(() => {
-      if (!selectedSku) {
-        return null;
-      }
+  const currentItem = useMemo(() => {
+    if (!selectedSku) {
+      return null;
+    }
 
-      return (
-        items.find(
-          (item) =>
-            normalizeSku(
-              item.sku
-            ) ===
-            normalizeSku(
-              selectedSku
-            )
-        ) || null
-      );
-    }, [
-      items,
-      selectedSku,
-    ]);
+    return (
+      items.find(
+        (item) =>
+          normalizeSku(item.sku) ===
+          normalizeSku(selectedSku)
+      ) || null
+    );
+  }, [items, selectedSku]);
 
   // =====================================================
   // SKU OPTIONS
-  //
-  // HANYA DARI PICKING ORDER INI
   // =====================================================
 
   const skuOptions = useMemo(() => {
-    return [...items].sort(
-      (a, b) =>
-        a.sku.localeCompare(
-          b.sku
-        )
+    return [...items].sort((a, b) =>
+      a.sku.localeCompare(b.sku)
     );
   }, [items]);
+
+  // =====================================================
+  // FILTER SKU OPTIONS
+  // =====================================================
+
+  const filteredSkuOptions = useMemo(() => {
+    const search =
+      normalizeSku(skuSearch);
+
+    if (!search) {
+      return skuOptions;
+    }
+
+    return skuOptions.filter((item) =>
+      normalizeSku(item.sku).includes(search)
+    );
+  }, [skuOptions, skuSearch]);
 
   // =====================================================
   // REMAINING QTY CURRENT SKU
   // =====================================================
 
-  const remainingQty =
-    currentItem
-      ? Math.max(
-          0,
-          currentItem.qty_picked -
-            currentItem.qty_packed
-        )
-      : 0;
+  const remainingQty = currentItem
+    ? Math.max(
+        0,
+        currentItem.qty_picked -
+          currentItem.qty_packed
+      )
+    : 0;
 
   // =====================================================
   // TOTAL REMAINING
   // =====================================================
 
-  const totalRemaining =
-    items.reduce(
-      (total, item) =>
-        total +
-        Math.max(
-          0,
-          item.qty_picked -
-            item.qty_packed
-        ),
-      0
-    );
+  const totalRemaining = items.reduce(
+    (total, item) =>
+      total +
+      Math.max(
+        0,
+        item.qty_picked -
+          item.qty_packed
+      ),
+    0
+  );
 
   // =====================================================
   // PROGRESS
@@ -636,9 +553,7 @@ export default function PackingPage() {
     totalPicked > 0
       ? Math.min(
           100,
-          (totalPacked /
-            totalPicked) *
-            100
+          (totalPacked / totalPicked) * 100
         )
       : 0;
 
@@ -646,13 +561,13 @@ export default function PackingPage() {
   // CHANGE SKU
   // =====================================================
 
-  function handleSkuChange(
-    value: string
-  ) {
-    const sku =
-      normalizeSku(value);
+  function handleSkuChange(value: string) {
+    const sku = normalizeSku(value);
 
     setSelectedSku(sku);
+
+    // Isi input pencarian dengan SKU
+    setSkuSearch(sku);
 
     // Reset validasi scan
     setScanSku("");
@@ -666,15 +581,90 @@ export default function PackingPage() {
     // Fokus scan SKU
     setTimeout(() => {
       document
-        .getElementById(
-          "scan-sku-input"
-        )
+        .getElementById("scan-sku-input")
         ?.focus();
     }, 50);
   }
 
   // =====================================================
-  // SCAN SKU
+  // SCAN / INPUT SKU UNTUK MEMILIH SKU
+  // =====================================================
+
+  function handleSkuSearch(
+    value: string
+  ) {
+    setSkuSearch(value);
+
+    const scannedSku =
+      normalizeSku(value);
+
+    if (!scannedSku) {
+      return;
+    }
+
+    // Cari SKU yang sama persis
+    const exactMatch =
+      skuOptions.find(
+        (item) =>
+          normalizeSku(item.sku) ===
+          scannedSku
+      );
+
+    // Kalau hasil scanner cocok
+    if (exactMatch) {
+      handleSkuChange(
+        exactMatch.sku
+      );
+
+      return;
+    }
+
+    // Kalau tidak cocok, jangan mengganti
+    // selectedSku secara otomatis
+  }
+
+  // =====================================================
+  // ENTER DARI BARCODE SCANNER
+  // =====================================================
+
+  function handleSkuSearchKeyDown(
+    e: React.KeyboardEvent<HTMLInputElement>
+  ) {
+    if (e.key !== "Enter") {
+      return;
+    }
+
+    e.preventDefault();
+
+    const scannedSku =
+      normalizeSku(skuSearch);
+
+    if (!scannedSku) {
+      return;
+    }
+
+    const exactMatch =
+      skuOptions.find(
+        (item) =>
+          normalizeSku(item.sku) ===
+          scannedSku
+      );
+
+    if (exactMatch) {
+      handleSkuChange(
+        exactMatch.sku
+      );
+    } else {
+      alert(
+        `SKU ${scannedSku} tidak ditemukan pada hasil picking order ini.`
+      );
+
+      setSkuSearch("");
+    }
+  }
+
+  // =====================================================
+  // SCAN SKU KEDUA
   // =====================================================
 
   function handleScanSku(
@@ -760,8 +750,7 @@ export default function PackingPage() {
       // VALIDASI QTY
       // =================================================
 
-      const qty =
-        Number(packQty);
+      const qty = Number(packQty);
 
       if (
         !Number.isFinite(qty) ||
@@ -807,8 +796,7 @@ export default function PackingPage() {
       let weightValue = 0;
 
       if (weight.trim()) {
-        weightValue =
-          Number(weight);
+        weightValue = Number(weight);
 
         if (
           !Number.isFinite(
@@ -841,10 +829,8 @@ export default function PackingPage() {
             currentItem.deskripsi ||
             null,
           qty,
-          carton:
-            finalCarton,
-          weight:
-            weightValue,
+          carton: finalCarton,
+          weight: weightValue,
           packing_at:
             new Date().toISOString(),
         });
@@ -885,11 +871,11 @@ export default function PackingPage() {
       // Refresh
       await loadData(true);
 
-      // Fokus kembali ke dropdown SKU
+      // Fokus kembali ke input SKU
       setTimeout(() => {
         document
           .getElementById(
-            "packing-sku-select"
+            "sku-search-input"
           )
           ?.focus();
       }, 100);
@@ -940,9 +926,7 @@ export default function PackingPage() {
       }
 
       const notPicked =
-        (
-          allocationData || []
-        ).filter(
+        (allocationData || []).filter(
           (row) =>
             toNumber(
               row.qty_picked
@@ -952,9 +936,7 @@ export default function PackingPage() {
             )
         );
 
-      if (
-        notPicked.length > 0
-      ) {
+      if (notPicked.length > 0) {
         alert(
           `Picking belum selesai.\n\n` +
             `Masih ada ${notPicked.length} item yang belum selesai dipick.`
@@ -1010,82 +992,70 @@ export default function PackingPage() {
       // =================================================
 
       const pickedMap =
-        new Map<
-          string,
-          number
-        >();
+        new Map<string, number>();
 
-      (
-        pickingData || []
-      ).forEach((row) => {
-        const sku =
-          normalizeSku(row.sku);
+      (pickingData || []).forEach(
+        (row) => {
+          const sku =
+            normalizeSku(row.sku);
 
-        if (!sku) return;
+          if (!sku) return;
 
-        pickedMap.set(
-          sku,
-          (pickedMap.get(sku) ||
-            0) +
-            toNumber(
-              row.qty_picked
-            )
-        );
-      });
+          pickedMap.set(
+            sku,
+            (pickedMap.get(sku) ||
+              0) +
+              toNumber(
+                row.qty_picked
+              )
+          );
+        }
+      );
 
       // =================================================
       // GROUP PACKED
       // =================================================
 
       const packedMap =
-        new Map<
-          string,
-          number
-        >();
+        new Map<string, number>();
 
-      (
-        packingData || []
-      ).forEach((row) => {
-        const sku =
-          normalizeSku(row.sku);
+      (packingData || []).forEach(
+        (row) => {
+          const sku =
+            normalizeSku(row.sku);
 
-        if (!sku) return;
+          if (!sku) return;
 
-        packedMap.set(
-          sku,
-          (packedMap.get(sku) ||
-            0) +
-            toNumber(row.qty)
-        );
-      });
+          packedMap.set(
+            sku,
+            (packedMap.get(sku) ||
+              0) +
+              toNumber(row.qty)
+          );
+        }
+      );
 
       // =================================================
       // CEK SEMUA SKU
       // =================================================
 
-      const notPacked: string[] =
-        [];
+      const notPacked: string[] = [];
 
       pickedMap.forEach(
         (pickedQty, sku) => {
           const packedQty =
-            packedMap.get(sku) ||
-            0;
+            packedMap.get(sku) || 0;
 
           if (
             packedQty <
             pickedQty
           ) {
-            notPacked.push(
-              sku
-            );
+            notPacked.push(sku);
           }
         }
       );
 
-      if (
-        notPacked.length > 0
-      ) {
+      if (notPacked.length > 0) {
         alert(
           `Packing belum selesai.\n\n` +
             `SKU yang belum selesai:\n` +
@@ -1233,7 +1203,6 @@ export default function PackingPage() {
 
       <div className="max-w-2xl mx-auto px-4 py-5">
 
-        
         {/* =================================================
             PICKING STATUS
         ================================================= */}
@@ -1340,10 +1309,6 @@ export default function PackingPage() {
 
         ) : items.length === 0 ? (
 
-          /* =================================================
-             EMPTY
-          ================================================= */
-
           <div className="bg-white rounded-xl shadow-sm border p-8 text-center">
 
             <CheckCircle2
@@ -1371,7 +1336,7 @@ export default function PackingPage() {
           <div className="space-y-5">
 
             {/* =================================================
-                STEP 1 - PILIH SKU
+                STEP 1 - PILIH / SCAN SKU
             ================================================= */}
 
             <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
@@ -1380,23 +1345,65 @@ export default function PackingPage() {
 
                 <div className="flex items-center gap-2">
 
-                 
+                  <ScanLine
+                    size={19}
+                    className="text-blue-600"
+                  />
+
                   <div>
 
                     <h2 className="font-bold text-slate-800">
-                      Pilih SKU
+                      Pilih / Scan SKU
                     </h2>
 
-                   
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Bisa dipilih dari dropdown atau langsung scan barcode SKU
+                    </p>
+
                   </div>
 
                 </div>
 
               </div>
 
-              <div className="p-4">
+              <div className="p-4 space-y-3">
 
-               
+                {/* =================================================
+                    INPUT SCAN SKU
+                ================================================= */}
+
+                <div className="relative">
+
+                  <ScanLine
+                    size={19}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  />
+
+                  <input
+                    id="sku-search-input"
+                    autoFocus
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    value={skuSearch}
+                    onChange={(e) =>
+                      handleSkuSearch(
+                        e.target.value
+                      )
+                    }
+                    onKeyDown={
+                      handleSkuSearchKeyDown
+                    }
+                    disabled={saving}
+                    className="w-full border border-slate-300 rounded-xl pl-10 pr-4 py-3 text-base font-semibold uppercase focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100"
+                    placeholder="Scan SKU atau ketik SKU..."
+                  />
+
+                </div>
+
+                {/* =================================================
+                    DROPDOWN
+                ================================================= */}
 
                 <select
                   id="packing-sku-select"
@@ -1410,20 +1417,54 @@ export default function PackingPage() {
                   className="w-full border border-slate-300 rounded-xl px-4 py-3 bg-white text-base font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100"
                 >
 
-                  
-
-                  {skuOptions.map(
-                    (item) => (
-                      <option
-                        key={item.sku}
-                        value={item.sku}
-                      >
-                        {item.sku}
-                      </option>
+                  {filteredSkuOptions.length ===
+                  0 ? (
+                    <option value="">
+                      SKU tidak ditemukan
+                    </option>
+                  ) : (
+                    filteredSkuOptions.map(
+                      (item) => (
+                        <option
+                          key={item.sku}
+                          value={item.sku}
+                        >
+                          {item.sku}
+                        </option>
+                      )
                     )
                   )}
 
                 </select>
+
+                {/* =================================================
+                    STATUS SCAN
+                ================================================= */}
+
+                {skuSearch &&
+                  !skuOptions.some(
+                    (item) =>
+                      normalizeSku(
+                        item.sku
+                      ) ===
+                      normalizeSku(
+                        skuSearch
+                      )
+                  ) && (
+                    <div className="rounded-lg bg-yellow-50 border border-yellow-200 px-3 py-2 text-sm text-yellow-700">
+                      SKU belum ditemukan pada
+                      hasil picking order ini.
+                    </div>
+                  )}
+
+                {selectedSku && (
+                  <div className="text-xs text-slate-500">
+                    SKU dipilih:{" "}
+                    <span className="font-bold text-blue-700">
+                      {selectedSku}
+                    </span>
+                  </div>
+                )}
 
               </div>
 
@@ -1431,7 +1472,6 @@ export default function PackingPage() {
 
             {/* =================================================
                 STEP 2 - DETAIL SKU
-                HANYA INFORMASI PENTING
             ================================================= */}
 
             {currentItem && (
@@ -1441,7 +1481,6 @@ export default function PackingPage() {
                 <div className="px-4 py-3 border-b bg-slate-50">
 
                   <div className="flex items-center gap-2">
-   
 
                   </div>
 
@@ -1456,6 +1495,7 @@ export default function PackingPage() {
                     <div className="text-xs text-slate-500">
                       SKU
                     </div>
+
                     <div className="text-xl sm:text-xl font-bold text-blue-700 break-all">
                       {currentItem.sku}
                     </div>
@@ -1516,7 +1556,7 @@ export default function PackingPage() {
             )}
 
             {/* =================================================
-                STEP 3 - SCAN SKU
+                STEP 3 - SCAN SKU KEDUA
             ================================================= */}
 
             {currentItem && (
@@ -1527,7 +1567,6 @@ export default function PackingPage() {
 
                   <div className="flex items-center gap-2">
 
-                 
                   </div>
 
                 </div>
@@ -1547,7 +1586,6 @@ export default function PackingPage() {
 
                     <input
                       id="scan-sku-input"
-                      autoFocus
                       autoComplete="off"
                       autoCorrect="off"
                       spellCheck={false}
@@ -1565,12 +1603,10 @@ export default function PackingPage() {
                           ? "border-red-400 bg-red-50 text-red-700 focus:ring-red-400"
                           : "border-slate-300 focus:ring-blue-500"
                       }`}
-                      placeholder="Scan SKU..."
+                      placeholder="Scan SKU untuk validasi..."
                     />
 
                   </div>
-
-                
 
                   {/* INVALID */}
 
@@ -1594,6 +1630,24 @@ export default function PackingPage() {
 
                     )}
 
+                  {/* VALID */}
+
+                  {skuValidated && (
+
+                    <div className="mt-3 rounded-lg bg-green-50 border border-green-200 px-3 py-3 text-green-700">
+
+                      <div className="font-bold">
+                        SKU sesuai
+                      </div>
+
+                      <div className="text-sm mt-1">
+                        SKU berhasil divalidasi.
+                      </div>
+
+                    </div>
+
+                  )}
+
                 </div>
 
               </div>
@@ -1612,13 +1666,6 @@ export default function PackingPage() {
                   <div className="px-4 py-3 border-b bg-slate-50">
 
                     <div className="flex items-center gap-2">
-
-                     
-
-                      <div>
-
-
-                      </div>
 
                     </div>
 
@@ -1718,8 +1765,6 @@ export default function PackingPage() {
                 </div>
 
               )}
-
-           
 
           </div>
 
