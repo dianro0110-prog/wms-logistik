@@ -47,12 +47,9 @@ export default function PackingListPage() {
          * =====================================================
          * 1. AMBIL SEMUA DATA PICKING
          *
-         * TIDAK LAGI MENGGUNAKAN:
+         * Order masuk Packing berdasarkan adanya hasil picking.
          *
-         * .eq("status", "PICKED")
-         *
-         * Karena order sekarang masuk Packing berdasarkan
-         * adanya hasil picking.
+         * TIDAK menggunakan status PICKED sebagai sumber utama.
          * =====================================================
          */
         const { data: pickingData, error: pickingError } =
@@ -112,10 +109,14 @@ export default function PackingListPage() {
          * =====================================================
          * 3. AMBIL ORDER HEADER
          *
-         * Kita hanya mengambil order yang memang sudah
-         * mempunyai hasil picking.
+         * Order yang statusnya PACKED TIDAK DITAMPILKAN.
          *
-         * STATUS TIDAK DIGUNAKAN SEBAGAI FILTER.
+         * Finish Packing pada halaman detail sudah melakukan:
+         *
+         * status: "PACKED"
+         *
+         * Jadi setelah kembali ke halaman ini, order otomatis
+         * hilang dari list.
          * =====================================================
          */
         const { data: orderData, error: orderError } =
@@ -129,6 +130,7 @@ export default function PackingListPage() {
               created_at
             `)
             .in("order_no", orderNos)
+            .neq("status", "PACKED")
             .order("created_at", {
               ascending: false,
             });
@@ -142,13 +144,7 @@ export default function PackingListPage() {
 
         /*
          * =====================================================
-         * 4. FALLBACK
-         *
-         * Kalau ada data picking tetapi order_header belum
-         * ditemukan, kita tetap tidak membuat order palsu.
-         *
-         * Hanya order yang benar-benar ada di order_header
-         * yang ditampilkan.
+         * 4. SET ORDER
          * =====================================================
          */
         setOrders(orderRows);
@@ -195,19 +191,10 @@ export default function PackingListPage() {
   // =========================================================
   // AUTO REFRESH
   //
-  // Setiap 2 detik mengecek tabel picking.
+  // Setiap 2 detik mengecek tabel picking + order_header.
   //
-  // Jadi:
-  //
-  // PICKING CONFIRM
-  //      ↓
-  // INSERT picking
-  //      ↓
-  // Packing List membaca picking
-  //      ↓
-  // ORDER MUNCUL
-  //
-  // Tidak perlu Finish Picking.
+  // Jika status order berubah menjadi PACKED,
+  // order otomatis hilang dari list.
   // =========================================================
   useEffect(() => {
     const interval = setInterval(() => {
@@ -245,6 +232,7 @@ export default function PackingListPage() {
 
         <div>
           <div className="flex items-center gap-3">
+
             <div className="bg-indigo-600 text-white p-3 rounded-xl">
               <PackageCheck size={28} />
             </div>
@@ -258,6 +246,7 @@ export default function PackingListPage() {
                 Order otomatis muncul berdasarkan hasil Picking
               </p>
             </div>
+
           </div>
         </div>
 
@@ -315,15 +304,17 @@ export default function PackingListPage() {
       {/* =====================================================
           LIVE INFO
       ====================================================== */}
-      <div className="
-        mb-5
-        bg-white
-        border
-        border-indigo-100
-        rounded-xl
-        p-4
-        shadow-sm
-      ">
+      <div
+        className="
+          mb-5
+          bg-white
+          border
+          border-indigo-100
+          rounded-xl
+          p-4
+          shadow-sm
+        "
+      >
 
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
 
@@ -347,15 +338,17 @@ export default function PackingListPage() {
 
           </div>
 
-          <div className="
-            text-xs
-            text-slate-500
-            bg-slate-100
-            px-3
-            py-2
-            rounded-lg
-            whitespace-nowrap
-          ">
+          <div
+            className="
+              text-xs
+              text-slate-500
+              bg-slate-100
+              px-3
+              py-2
+              rounded-lg
+              whitespace-nowrap
+            "
+          >
             Auto refresh: 2 detik
             <br />
             Update: {formatLastRefresh()}
@@ -368,17 +361,19 @@ export default function PackingListPage() {
           ORDER COUNT
       ====================================================== */}
       <div className="mb-4">
-        <div className="
-          inline-flex
-          items-center
-          gap-2
-          bg-white
-          border
-          rounded-lg
-          px-4
-          py-2
-          shadow-sm
-        ">
+        <div
+          className="
+            inline-flex
+            items-center
+            gap-2
+            bg-white
+            border
+            rounded-lg
+            px-4
+            py-2
+            shadow-sm
+          "
+        >
           <span className="text-sm text-slate-500">
             Order tersedia:
           </span>
@@ -468,13 +463,15 @@ export default function PackingListPage() {
 
                     <div className="flex flex-col items-center justify-center">
 
-                      <div className="
-                        bg-slate-100
-                        text-slate-400
-                        p-4
-                        rounded-full
-                        mb-3
-                      ">
+                      <div
+                        className="
+                          bg-slate-100
+                          text-slate-400
+                          p-4
+                          rounded-full
+                          mb-3
+                        "
+                      >
                         <PackageCheck size={36} />
                       </div>
 
@@ -509,17 +506,19 @@ export default function PackingListPage() {
 
                     {/* NO */}
                     <td className="border-b p-3">
-                      <span className="
-                        inline-flex
-                        items-center
-                        justify-center
-                        w-8
-                        h-8
-                        bg-slate-100
-                        rounded-lg
-                        font-semibold
-                        text-slate-600
-                      ">
+                      <span
+                        className="
+                          inline-flex
+                          items-center
+                          justify-center
+                          w-8
+                          h-8
+                          bg-slate-100
+                          rounded-lg
+                          font-semibold
+                          text-slate-600
+                        "
+                      >
                         {index + 1}
                       </span>
                     </td>
@@ -549,15 +548,17 @@ export default function PackingListPage() {
                     {/* STATUS */}
                     <td className="border-b p-3 text-center">
 
-                      <span className="
-                        bg-green-100
-                        text-green-700
-                        px-3
-                        py-1.5
-                        rounded-full
-                        text-sm
-                        font-semibold
-                      ">
+                      <span
+                        className="
+                          bg-green-100
+                          text-green-700
+                          px-3
+                          py-1.5
+                          rounded-full
+                          text-sm
+                          font-semibold
+                        "
+                      >
                         {order.status || "PICKING"}
                       </span>
 
@@ -616,8 +617,7 @@ export default function PackingListPage() {
       ====================================================== */}
       <div className="mt-4 text-xs text-slate-400 text-center">
         Packing membaca data langsung dari tabel picking.
-        Status PICKED pada order_header tidak diperlukan untuk
-        menampilkan Order di sini.
+        Order dengan status PACKED tidak ditampilkan kembali.
       </div>
 
     </div>
