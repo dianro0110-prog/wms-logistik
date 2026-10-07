@@ -1,437 +1,906 @@
-
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeftCircle } from "lucide-react";
+import {
+  ArrowLeftCircle,
+  CheckCircle2,
+  PackageCheck,
+  ScanLine,
+  RefreshCw,
+  Clock3,
+  Package,
+  Boxes,
+} from "lucide-react";
 import { supabase } from "../../../../lib/supabase";
 
-interface PackingItem {
+// =====================================================
+// TYPES
+// =====================================================
+
+interface PickingRow {
   id: number;
   order_no: string;
   sku: string;
-  deskripsi?: string | null;
+  location?: string | null;
   qty_picked: number;
-  qty_packed?: number;
-  qty_packed_by?: string;
+  deskripsi?: string | null;
 }
+
+interface ProductRow {
+  sku: string;
+  deskripsi?: string | null;
+}
+
+interface PackingRow {
+  sku: string;
+  qty: number;
+}
+
+interface PackingItem {
+  sku: string;
+  deskripsi: string;
+  qty_picked: number;
+  qty_packed: number;
+}
+
+// =====================================================
+// HELPERS
+// =====================================================
+
+function normalizeSku(value: unknown) {
+  return String(value || "")
+    .trim()
+    .toUpperCase();
+}
+
+function toNumber(value: unknown) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+// =====================================================
+// PAGE
+// =====================================================
 
 export default function PackingPage() {
   const router = useRouter();
   const params = useParams();
 
-  const orderNo = params.orderNo as string;
+  const orderNo = String(params.orderNo || "");
+
+  // =====================================================
+  // STATE
+  // =====================================================
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const [customerName, setCustomerName] = useState("");
+  const [customerName, setCustomerName] =
+    useState("");
 
-  const [items, setItems] = useState<PackingItem[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [items, setItems] = useState<PackingItem[]>(
+    []
+  );
 
-  const [scanSku, setScanSku] = useState("");
-  const [cartonNo, setCartonNo] = useState("");
-  const [packQty, setPackQty] = useState("");
-  const [weight, setWeight] = useState("");
+  // SKU yang dipilih dari hasil picking order ini
+  const [selectedSku, setSelectedSku] =
+    useState("");
+
+  // Scan SKU
+  const [scanSku, setScanSku] =
+    useState("");
+
+  const [skuValidated, setSkuValidated] =
+    useState(false);
+
+  // Packing form
+  const [cartonNo, setCartonNo] =
+    useState("");
+
+  const [packQty, setPackQty] =
+    useState("");
+
+  const [weight, setWeight] =
+    useState("");
+
+  // Status
+  const [pickingComplete, setPickingComplete] =
+    useState(false);
+
+  const [totalAllocated, setTotalAllocated] =
+    useState(0);
+
+  const [totalPicked, setTotalPicked] =
+    useState(0);
+
+  const [totalPacked, setTotalPacked] =
+    useState(0);
+
+  const [lastRefresh, setLastRefresh] =
+    useState(new Date());
+
+  const loadingRef = useRef(false);
 
   // =====================================================
   // LOAD DATA
   // =====================================================
-  useEffect(() => {
-    if (orderNo) {
-      loadData();
-    }
-  }, [orderNo]);
 
-  async function loadData() {
-    try {
-      setLoading(true);
+  const loadData = useCallback(
+    async (showLoading = true) => {
+      if (!orderNo) return;
 
-      // =====================================================
-      // HEADER ORDER
-      // =====================================================
-      const {
-        data: header,
-        error: headerError,
-      } = await supabase
-        .from("order_header")
-        .select("customer_name")
-        .eq("order_no", orderNo)
-        .single();
+      if (loadingRef.current) return;
 
-      if (headerError) {
-        alert(headerError.message);
-        return;
-      }
+      loadingRef.current = true;
 
-      setCustomerName(header?.customer_name || "");
+      try {
+        if (showLoading) {
+          setLoading(true);
+        }
 
-      // =====================================================
-      // PICKING
-      // =====================================================
-      const {
-        data: pickingData,
-        error: pickingError,
-      } = await supabase
-        .from("picking")
-        .select("*")
-        .eq("order_no", orderNo)
-        .order("location", {
-          ascending: true,
+        // =================================================
+        // CUSTOMER
+        // =================================================
+
+        const {
+          data: orderHeader,
+          error: orderError,
+        } = await supabase
+          .from("order_header")
+          .select("customer_name")
+          .eq("order_no", orderNo)
+          .maybeSingle();
+
+        if (orderError) {
+          console.error(
+            "Load order error:",
+            orderError
+          );
+        }
+
+        setCustomerName(
+          orderHeader?.customer_name || ""
+        );
+
+        // =================================================
+        // PRODUCT
+        //
+        // Hanya digunakan untuk fallback deskripsi.
+        // BUKAN sumber SKU.
+        // =================================================
+
+        const {
+          data: productData,
+          error: productError,
+        } = await supabase
+          .from("product")
+          .select("sku, deskripsi");
+
+        if (productError) {
+          console.error(
+            "Load product error:",
+            productError
+          );
+        }
+
+        const productMap = new Map<
+          string,
+          string
+        >();
+
+        (productData || []).forEach(
+          (product: ProductRow) => {
+            const sku =
+              normalizeSku(product.sku);
+
+            if (!sku) return;
+
+            productMap.set(
+              sku,
+              String(
+                product.deskripsi || ""
+              ).trim()
+            );
+          }
+        );
+
+        // =================================================
+        // ALLOCATION
+        //
+        // HANYA ORDER INI
+        // =================================================
+
+        const {
+          data: allocationData,
+          error: allocationError,
+        } = await supabase
+          .from("allocation")
+          .select(
+            "sku, qty_allocated, qty_picked"
+          )
+          .eq("order_no", orderNo);
+
+        if (allocationError) {
+          console.error(
+            "Load allocation error:",
+            allocationError
+          );
+        }
+
+        let allocatedTotal = 0;
+        let pickedAllocationTotal = 0;
+
+        (
+          allocationData || []
+        ).forEach((row) => {
+          allocatedTotal +=
+            toNumber(
+              row.qty_allocated
+            );
+
+          pickedAllocationTotal +=
+            toNumber(
+              row.qty_picked
+            );
         });
 
-      if (pickingError) {
-        alert(pickingError.message);
-        return;
-      }
-
-      // =====================================================
-      // PACKING
-      // =====================================================
-      const {
-        data: packingData,
-        error: packingError,
-      } = await supabase
-        .from("packing")
-        .select("sku, qty")
-        .eq("order_no", orderNo);
-
-      if (packingError) {
-        alert(packingError.message);
-        return;
-      }
-
-      // =====================================================
-      // TOTAL PICKING PER SKU
-      //
-      // Contoh:
-      // SKU A - Location A = 5
-      // SKU A - Location B = 7
-      //
-      // Total SKU A = 12
-      // =====================================================
-      const pickedBySku: Record<
-        string,
-        {
-          qty: number;
-          id: number;
-          sku: string;
-          deskripsi: string;
-          order_no: string;
-        }
-      > = {};
-
-      (pickingData || []).forEach((item: any) => {
-        const sku = String(item.sku || "")
-          .trim()
-          .toUpperCase();
-
-        if (!sku) return;
-
-        const qtyPicked = Number(
-          item.qty_picked || 0
+        setTotalAllocated(
+          allocatedTotal
         );
 
-        if (!pickedBySku[sku]) {
-          pickedBySku[sku] = {
-            qty: qtyPicked,
-            id: Number(item.id),
-            sku: item.sku || "",
-            deskripsi:
-              item.deskripsi ||
-              item.description ||
-              "",
-            order_no:
-              item.order_no || orderNo,
-          };
-        } else {
-          pickedBySku[sku].qty += qtyPicked;
-        }
-      });
-
-      // =====================================================
-      // TOTAL PACKING PER SKU
-      // =====================================================
-      const packedBySku: Record<string, number> = {};
-
-      (packingData || []).forEach(
-        (packing: any) => {
-          const sku = String(packing.sku || "")
-            .trim()
-            .toUpperCase();
-
-          if (!sku) return;
-
-          packedBySku[sku] =
-            (packedBySku[sku] || 0) +
-            Number(packing.qty || 0);
-        }
-      );
-
-      // =====================================================
-      // GABUNGKAN TOTAL PICKING + PACKING
-      //
-      // Sekarang 1 SKU hanya menjadi 1 item.
-      // Tidak peduli SKU tersebut berasal dari
-      // berapa lokasi picking.
-      // =====================================================
-      const result: PackingItem[] = Object.values(
-        pickedBySku
-      ).map((item) => {
-        const sku = item.sku
-          .trim()
-          .toUpperCase();
-
-        const qtyPacked =
-          packedBySku[sku] || 0;
-
-        return {
-          id: item.id,
-          order_no: item.order_no,
-          sku: item.sku,
-          deskripsi: item.deskripsi,
-          qty_picked: item.qty,
-          qty_packed: qtyPacked,
-        };
-      });
-
-      // =====================================================
-      // HANYA ITEM YANG BELUM SELESAI
-      // =====================================================
-      const remaining = result.filter(
-        (item) => {
-          const qtyPicked = Number(
-            item.qty_picked || 0
-          );
-
-          const qtyPacked = Number(
-            item.qty_packed || 0
-          );
-
-          return qtyPacked < qtyPicked;
-        }
-      );
-
-      setItems(remaining);
-
-      setCurrentIndex((prev) => {
-        if (remaining.length === 0) {
-          return 0;
-        }
-
-        return Math.min(
-          prev,
-          remaining.length - 1
+        setTotalPicked(
+          pickedAllocationTotal
         );
-      });
-    } catch (err) {
-      console.error(err);
 
-      alert(
-        "Terjadi kesalahan saat mengambil data."
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
+        setPickingComplete(
+          (allocationData || []).length >
+            0 &&
+            (allocationData || []).every(
+              (row) =>
+                toNumber(
+                  row.qty_picked
+                ) >=
+                toNumber(
+                  row.qty_allocated
+                )
+            )
+        );
+
+        // =================================================
+        // PICKING
+        //
+        // SKU HANYA DARI PICKING ORDER INI
+        // =================================================
+
+        const {
+          data: pickingData,
+          error: pickingError,
+        } = await supabase
+          .from("picking")
+          .select(
+            "id, order_no, sku, location, qty_picked, deskripsi"
+          )
+          .eq("order_no", orderNo)
+          .order("id", {
+            ascending: true,
+          });
+
+        if (pickingError) {
+          console.error(
+            "Load picking error:",
+            pickingError
+          );
+
+          setItems([]);
+          return;
+        }
+
+        // =================================================
+        // PACKING
+        //
+        // HANYA ORDER INI
+        // =================================================
+
+        const {
+          data: packingData,
+          error: packingError,
+        } = await supabase
+          .from("packing")
+          .select("sku, qty")
+          .eq("order_no", orderNo);
+
+        if (packingError) {
+          console.error(
+            "Load packing error:",
+            packingError
+          );
+        }
+
+        // =================================================
+        // GROUP PICKING BY SKU
+        // =================================================
+
+        const pickedBySku =
+          new Map<
+            string,
+            {
+              sku: string;
+              deskripsi: string;
+              qty_picked: number;
+            }
+          >();
+
+        (
+          pickingData || []
+        ).forEach(
+          (row: PickingRow) => {
+            // Pastikan benar-benar order yang sedang dibuka
+            if (
+              String(
+                row.order_no || ""
+              ).trim() !==
+              orderNo.trim()
+            ) {
+              return;
+            }
+
+            const sku =
+              normalizeSku(row.sku);
+
+            if (!sku) return;
+
+            const description =
+              String(
+                row.deskripsi ||
+                  productMap.get(
+                    sku
+                  ) ||
+                  ""
+              ).trim();
+
+            const existing =
+              pickedBySku.get(sku);
+
+            if (existing) {
+              existing.qty_picked +=
+                toNumber(
+                  row.qty_picked
+                );
+
+              if (
+                !existing.deskripsi &&
+                description
+              ) {
+                existing.deskripsi =
+                  description;
+              }
+            } else {
+              pickedBySku.set(sku, {
+                sku,
+                deskripsi:
+                  description,
+                qty_picked:
+                  toNumber(
+                    row.qty_picked
+                  ),
+              });
+            }
+          }
+        );
+
+        // =================================================
+        // GROUP PACKING BY SKU
+        // =================================================
+
+        const packedBySku =
+          new Map<
+            string,
+            number
+          >();
+
+        (
+          packingData || []
+        ).forEach(
+          (row: PackingRow) => {
+            const sku =
+              normalizeSku(row.sku);
+
+            if (!sku) return;
+
+            packedBySku.set(
+              sku,
+              (packedBySku.get(sku) ||
+                0) +
+                toNumber(row.qty)
+            );
+          }
+        );
+
+        // =================================================
+        // BUILD ITEMS
+        //
+        // SKU HANYA DARI PICKING
+        //
+        // Hanya SKU yang masih mempunyai sisa
+        // yang ditampilkan.
+        // =================================================
+
+        const result: PackingItem[] =
+          Array.from(
+            pickedBySku.values()
+          )
+            .map((item) => {
+              const packed =
+                packedBySku.get(
+                  item.sku
+                ) || 0;
+
+              return {
+                sku: item.sku,
+                deskripsi:
+                  item.deskripsi,
+                qty_picked:
+                  item.qty_picked,
+                qty_packed:
+                  packed,
+              };
+            })
+            .filter(
+              (item) =>
+                item.qty_packed <
+                item.qty_picked
+            );
+
+        // =================================================
+        // TOTAL PACKED
+        // =================================================
+
+        const packedTotal =
+          Array.from(
+            packedBySku.values()
+          ).reduce(
+            (sum, qty) =>
+              sum + qty,
+            0
+          );
+
+        setTotalPacked(
+          packedTotal
+        );
+
+        setItems(result);
+
+        // =================================================
+        // SELECTED SKU
+        //
+        // Pertahankan SKU sebelumnya jika masih ada.
+        // Kalau sudah selesai, pindah ke SKU berikutnya.
+        // =================================================
+
+        setSelectedSku(
+          (previous) => {
+            if (!previous) {
+              return (
+                result[0]?.sku || ""
+              );
+            }
+
+            const exists =
+              result.some(
+                (item) =>
+                  normalizeSku(
+                    item.sku
+                  ) ===
+                  normalizeSku(
+                    previous
+                  )
+              );
+
+            if (exists) {
+              return previous;
+            }
+
+            return (
+              result[0]?.sku || ""
+            );
+          }
+        );
+
+        setLastRefresh(
+          new Date()
+        );
+      } catch (error) {
+        console.error(
+          "Load packing data error:",
+          error
+        );
+      } finally {
+        if (showLoading) {
+          setLoading(false);
+        }
+
+        loadingRef.current = false;
+      }
+    },
+    [orderNo]
+  );
+
+  // =====================================================
+  // INITIAL LOAD
+  // =====================================================
+
+  useEffect(() => {
+    if (!orderNo) return;
+
+    loadData(true);
+  }, [orderNo, loadData]);
+
+  // =====================================================
+  // AUTO REFRESH
+  // =====================================================
+
+  useEffect(() => {
+    if (!orderNo) return;
+
+    const interval =
+      setInterval(() => {
+        loadData(false);
+      }, 3000);
+
+    return () =>
+      clearInterval(interval);
+  }, [orderNo, loadData]);
 
   // =====================================================
   // CURRENT ITEM
   // =====================================================
-  const currentItem = items[currentIndex];
+
+  const currentItem =
+    useMemo(() => {
+      if (!selectedSku) {
+        return null;
+      }
+
+      return (
+        items.find(
+          (item) =>
+            normalizeSku(
+              item.sku
+            ) ===
+            normalizeSku(
+              selectedSku
+            )
+        ) || null
+      );
+    }, [
+      items,
+      selectedSku,
+    ]);
 
   // =====================================================
-  // CARI SKU DARI INPUT SCAN
+  // SKU OPTIONS
+  //
+  // HANYA DARI PICKING ORDER INI
   // =====================================================
-  const scannedItem = scanSku.trim()
-    ? items.find(
-        (item) =>
-          item.sku
-            .trim()
-            .toUpperCase() ===
-          scanSku
-            .trim()
-            .toUpperCase()
-      )
-    : null;
+
+  const skuOptions = useMemo(() => {
+    return [...items].sort(
+      (a, b) =>
+        a.sku.localeCompare(
+          b.sku
+        )
+    );
+  }, [items]);
 
   // =====================================================
-  // DATA OTOMATIS SKU
+  // REMAINING QTY CURRENT SKU
   // =====================================================
-  const displayDescription =
-    scannedItem?.deskripsi || "";
 
-  const displayQtyPicked = Number(
-    scannedItem?.qty_picked || 0
-  );
+  const remainingQty =
+    currentItem
+      ? Math.max(
+          0,
+          currentItem.qty_picked -
+            currentItem.qty_packed
+        )
+      : 0;
 
-  const displayQtyPacked = Number(
-    scannedItem?.qty_packed || 0
-  );
+  // =====================================================
+  // TOTAL REMAINING
+  // =====================================================
 
-  const displayQtySisa =
-    displayQtyPicked -
-    displayQtyPacked;
+  const totalRemaining =
+    items.reduce(
+      (total, item) =>
+        total +
+        Math.max(
+          0,
+          item.qty_picked -
+            item.qty_packed
+        ),
+      0
+    );
+
+  // =====================================================
+  // PROGRESS
+  // =====================================================
+
+  const packingProgress =
+    totalPicked > 0
+      ? Math.min(
+          100,
+          (totalPacked /
+            totalPicked) *
+            100
+        )
+      : 0;
+
+  // =====================================================
+  // CHANGE SKU
+  // =====================================================
+
+  function handleSkuChange(
+    value: string
+  ) {
+    const sku =
+      normalizeSku(value);
+
+    setSelectedSku(sku);
+
+    // Reset validasi scan
+    setScanSku("");
+    setSkuValidated(false);
+
+    // Reset form
+    setPackQty("");
+    setCartonNo("");
+    setWeight("");
+
+    // Fokus scan SKU
+    setTimeout(() => {
+      document
+        .getElementById(
+          "scan-sku-input"
+        )
+        ?.focus();
+    }, 50);
+  }
+
+  // =====================================================
+  // SCAN SKU
+  // =====================================================
+
+  function handleScanSku(
+    value: string
+  ) {
+    setScanSku(value);
+
+    const scanned =
+      normalizeSku(value);
+
+    if (!currentItem) {
+      setSkuValidated(false);
+      return;
+    }
+
+    const required =
+      normalizeSku(
+        currentItem.sku
+      );
+
+    if (
+      scanned &&
+      scanned === required
+    ) {
+      setSkuValidated(true);
+
+      setTimeout(() => {
+        document
+          .getElementById(
+            "pack-qty-input"
+          )
+          ?.focus();
+      }, 50);
+    } else {
+      setSkuValidated(false);
+      setPackQty("");
+    }
+  }
+
+  // =====================================================
+  // RESET FORM
+  // =====================================================
+
+  function resetPackingForm() {
+    setScanSku("");
+    setSkuValidated(false);
+
+    setPackQty("");
+    setCartonNo("");
+    setWeight("");
+  }
 
   // =====================================================
   // CONFIRM PACKING
   // =====================================================
+
   async function confirmPacking() {
-    if (!currentItem) return;
+    if (!currentItem) {
+      alert(
+        "Silakan pilih SKU terlebih dahulu."
+      );
+      return;
+    }
 
     if (saving) return;
 
     setSaving(true);
 
     try {
-      // =====================================================
+      // =================================================
       // VALIDASI SKU
-      // =====================================================
-      const enteredSku = scanSku
-        .trim()
-        .toUpperCase();
+      // =================================================
 
-      const requiredSku = currentItem.sku
-        .trim()
-        .toUpperCase();
-
-      if (enteredSku !== requiredSku) {
+      if (!skuValidated) {
         alert(
-          `SKU salah!\n\nHarus : ${currentItem.sku}`
+          "Silakan scan SKU yang sesuai terlebih dahulu."
         );
 
         return;
       }
 
-      // =====================================================
+      // =================================================
       // VALIDASI QTY
-      // =====================================================
-      const qty = Number(packQty);
+      // =================================================
 
-      if (!packQty.trim() || qty <= 0) {
-        alert(
-          "Qty harus lebih besar dari 0"
-        );
-
-        return;
-      }
-
-      const alreadyPacked = Number(
-        currentItem.qty_packed || 0
-      );
-
-      const qtyPicked = Number(
-        currentItem.qty_picked || 0
-      );
-
-      const qtySisa =
-        qtyPicked - alreadyPacked;
-
-      if (qty > qtySisa) {
-        alert(
-          `Qty melebihi Qty Sisa.\n\n` +
-            `Total Kebutuhan SKU : ${qtyPicked}\n` +
-            `Sudah Packing : ${alreadyPacked}\n` +
-            `Qty Sisa : ${qtySisa}`
-        );
-
-        return;
-      }
-
-      // =====================================================
-      // VALIDASI CARTON
-      // =====================================================
-      if (!cartonNo.trim()) {
-        alert(
-          "Carton No wajib diisi"
-        );
-
-        return;
-      }
-
-      // =====================================================
-      // BERAT OPSIONAL
-      // =====================================================
-      const weightValue =
-        weight.trim() === ""
-          ? null
-          : Number(weight);
+      const qty =
+        Number(packQty);
 
       if (
-        weightValue !== null &&
-        weightValue <= 0
+        !Number.isFinite(qty) ||
+        qty <= 0
       ) {
         alert(
-          "Berat harus lebih besar dari 0"
+          "Qty packing harus lebih besar dari 0."
         );
 
         return;
       }
 
-      // =====================================================
-      // SIMPAN PACKING
-      // =====================================================
-      const { error } = await supabase
+      if (qty > remainingQty) {
+        alert(
+          `Qty packing melebihi sisa.\n\n` +
+            `SKU    : ${currentItem.sku}\n` +
+            `Qty    : ${qty}\n` +
+            `Sisa   : ${remainingQty}`
+        );
+
+        return;
+      }
+
+      // =================================================
+      // CARTON
+      // =================================================
+
+      const finalCarton =
+        cartonNo.trim();
+
+      if (!finalCarton) {
+        alert(
+          "Nomor carton wajib diisi."
+        );
+
+        return;
+      }
+
+      // =================================================
+      // WEIGHT
+      // =================================================
+
+      let weightValue = 0;
+
+      if (weight.trim()) {
+        weightValue =
+          Number(weight);
+
+        if (
+          !Number.isFinite(
+            weightValue
+          ) ||
+          weightValue <= 0
+        ) {
+          alert(
+            "Weight harus berupa angka lebih besar dari 0."
+          );
+
+          return;
+        }
+      }
+
+      // =================================================
+      // INSERT PACKING
+      // =================================================
+
+      const {
+        error: packingError,
+      } = await supabase
         .from("packing")
         .insert({
-          order_no:
-            currentItem.order_no,
-
+          order_no: orderNo,
           customer_name:
             customerName,
-
-          sku:
-            currentItem.sku,
-
+          sku: currentItem.sku,
           deskripsi:
             currentItem.deskripsi ||
             null,
-
-          qty: qty,
-
+          qty,
           carton:
-            cartonNo.trim(),
-
+            finalCarton,
           weight:
             weightValue,
-
           packing_at:
             new Date().toISOString(),
         });
 
-      if (error) {
-        alert(error.message);
+      if (packingError) {
+        console.error(
+          "Packing insert error:",
+          packingError
+        );
+
+        alert(
+          `Gagal menyimpan packing:\n${packingError.message}`
+        );
+
         return;
       }
 
-      // =====================================================
-      // SKU YANG BARU DIPACKING
-      // =====================================================
-      const confirmedSku =
-        currentItem.sku
-          .trim()
-          .toUpperCase();
-
-      // =====================================================
-      // RESET FORM
-      // =====================================================
-      setScanSku("");
-      setCartonNo("");
-      setPackQty("");
-      setWeight("");
-
-      // =====================================================
-      // REFRESH
-      // =====================================================
-      await refreshAfterPacking(
-        confirmedSku
-      );
-    } catch (err) {
-      console.error(err);
+      // =================================================
+      // SUCCESS
+      // =================================================
 
       alert(
-        "Terjadi kesalahan saat menyimpan packing."
+        `Packing berhasil!\n\n` +
+          `SKU       : ${currentItem.sku}\n` +
+          `Deskripsi : ${
+            currentItem.deskripsi ||
+            "-"
+          }\n` +
+          `Qty Pack  : ${qty}\n` +
+          `Carton    : ${finalCarton}\n` +
+          `Weight    : ${
+            weightValue || "-"
+          }`
+      );
+
+      resetPackingForm();
+
+      // Refresh
+      await loadData(true);
+
+      // Fokus kembali ke dropdown SKU
+      setTimeout(() => {
+        document
+          .getElementById(
+            "packing-sku-select"
+          )
+          ?.focus();
+      }, 100);
+    } catch (error) {
+      console.error(
+        "Confirm packing error:",
+        error
+      );
+
+      alert(
+        "Terjadi kesalahan saat proses packing."
       );
     } finally {
       setSaving(false);
@@ -439,36 +908,87 @@ export default function PackingPage() {
   }
 
   // =====================================================
-  // REFRESH AFTER PACKING
+  // FINISH PACKING
   // =====================================================
-  async function refreshAfterPacking(
-    confirmedSku: string
-  ) {
-    try {
-      setLoading(true);
 
-      // =====================================================
-      // PICKING
-      // =====================================================
+  async function finishPacking() {
+    if (saving) return;
+
+    try {
+      setSaving(true);
+
+      // =================================================
+      // CEK ALLOCATION
+      // =================================================
+
+      const {
+        data: allocationData,
+        error: allocationError,
+      } = await supabase
+        .from("allocation")
+        .select(
+          "sku, qty_allocated, qty_picked"
+        )
+        .eq("order_no", orderNo);
+
+      if (allocationError) {
+        alert(
+          allocationError.message
+        );
+
+        return;
+      }
+
+      const notPicked =
+        (
+          allocationData || []
+        ).filter(
+          (row) =>
+            toNumber(
+              row.qty_picked
+            ) <
+            toNumber(
+              row.qty_allocated
+            )
+        );
+
+      if (
+        notPicked.length > 0
+      ) {
+        alert(
+          `Picking belum selesai.\n\n` +
+            `Masih ada ${notPicked.length} item yang belum selesai dipick.`
+        );
+
+        return;
+      }
+
+      // =================================================
+      // LOAD PICKING
+      // =================================================
+
       const {
         data: pickingData,
         error: pickingError,
       } = await supabase
         .from("picking")
-        .select("*")
-        .eq("order_no", orderNo)
-        .order("location", {
-          ascending: true,
-        });
+        .select(
+          "sku, qty_picked"
+        )
+        .eq("order_no", orderNo);
 
       if (pickingError) {
-        alert(pickingError.message);
+        alert(
+          pickingError.message
+        );
+
         return;
       }
 
-      // =====================================================
-      // PACKING
-      // =====================================================
+      // =================================================
+      // LOAD PACKING
+      // =================================================
+
       const {
         data: packingData,
         error: packingError,
@@ -478,308 +998,109 @@ export default function PackingPage() {
         .eq("order_no", orderNo);
 
       if (packingError) {
-        alert(packingError.message);
+        alert(
+          packingError.message
+        );
+
         return;
       }
 
-      // =====================================================
-      // TOTAL PICKING PER SKU
-      // =====================================================
-      const pickedBySku: Record<
-        string,
-        {
-          qty: number;
-          id: number;
-          sku: string;
-          deskripsi: string;
-          order_no: string;
-        }
-      > = {};
+      // =================================================
+      // GROUP PICKED
+      // =================================================
 
-      (pickingData || []).forEach(
-        (item: any) => {
-          const sku = String(
-            item.sku || ""
-          )
-            .trim()
-            .toUpperCase();
+      const pickedMap =
+        new Map<
+          string,
+          number
+        >();
 
-          if (!sku) return;
+      (
+        pickingData || []
+      ).forEach((row) => {
+        const sku =
+          normalizeSku(row.sku);
 
-          const qtyPicked = Number(
-            item.qty_picked || 0
-          );
+        if (!sku) return;
 
-          if (!pickedBySku[sku]) {
-            pickedBySku[sku] = {
-              qty: qtyPicked,
-              id: Number(item.id),
-              sku: item.sku || "",
-              deskripsi:
-                item.deskripsi ||
-                item.description ||
-                "",
-              order_no:
-                item.order_no ||
-                orderNo,
-            };
-          } else {
-            pickedBySku[sku].qty +=
-              qtyPicked;
-          }
-        }
-      );
-
-      // =====================================================
-      // TOTAL PACKING PER SKU
-      // =====================================================
-      const packedBySku: Record<
-        string,
-        number
-      > = {};
-
-      (packingData || []).forEach(
-        (packing: any) => {
-          const sku = String(
-            packing.sku || ""
-          )
-            .trim()
-            .toUpperCase();
-
-          if (!sku) return;
-
-          packedBySku[sku] =
-            (packedBySku[sku] || 0) +
-            Number(packing.qty || 0);
-        }
-      );
-
-      // =====================================================
-      // GABUNGKAN
-      // =====================================================
-      const result: PackingItem[] =
-        Object.values(
-          pickedBySku
-        ).map((item) => {
-          const sku = item.sku
-            .trim()
-            .toUpperCase();
-
-          const qtyPacked =
-            packedBySku[sku] || 0;
-
-          return {
-            id: item.id,
-            order_no:
-              item.order_no,
-            sku:
-              item.sku,
-            deskripsi:
-              item.deskripsi,
-            qty_picked:
-              item.qty,
-            qty_packed:
-              qtyPacked,
-          };
-        });
-
-      // =====================================================
-      // ITEM YANG BELUM SELESAI
-      // =====================================================
-      const remaining =
-        result.filter((item) => {
-          const qtyPicked =
-            Number(
-              item.qty_picked || 0
-            );
-
-          const qtyPacked =
-            Number(
-              item.qty_packed || 0
-            );
-
-          return (
-            qtyPacked < qtyPicked
-          );
-        });
-
-      setItems(remaining);
-
-      // =====================================================
-      // ITEM YANG SAMA MASIH ADA SISA
-      // =====================================================
-      const sameItemIndex =
-        remaining.findIndex(
-          (item) =>
-            item.sku
-              .trim()
-              .toUpperCase() ===
-            confirmedSku
+        pickedMap.set(
+          sku,
+          (pickedMap.get(sku) ||
+            0) +
+            toNumber(
+              row.qty_picked
+            )
         );
+      });
 
-      if (sameItemIndex !== -1) {
-        setCurrentIndex(
-          sameItemIndex
+      // =================================================
+      // GROUP PACKED
+      // =================================================
+
+      const packedMap =
+        new Map<
+          string,
+          number
+        >();
+
+      (
+        packingData || []
+      ).forEach((row) => {
+        const sku =
+          normalizeSku(row.sku);
+
+        if (!sku) return;
+
+        packedMap.set(
+          sku,
+          (packedMap.get(sku) ||
+            0) +
+            toNumber(row.qty)
         );
-      } else if (
-        remaining.length > 0
-      ) {
-        setCurrentIndex((prev) =>
-          Math.min(
-            prev,
-            remaining.length - 1
-          )
-        );
-      } else {
-        setCurrentIndex(0);
-      }
-    } catch (err) {
-      console.error(err);
+      });
 
-      alert(
-        "Gagal memperbarui data packing."
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  // =====================================================
-  // FINISH PACKING
-  // =====================================================
-  async function finishPacking() {
-    try {
-      setSaving(true);
-
-      // =====================================================
-      // PICKING
-      // =====================================================
-      const {
-        data: pickingData,
-        error: pickingError,
-      } = await supabase
-        .from("picking")
-        .select(
-          "sku, qty_picked, deskripsi"
-        )
-        .eq("order_no", orderNo);
-
-      if (pickingError) {
-        alert(pickingError.message);
-        return;
-      }
-
-      // =====================================================
-      // PACKING
-      // =====================================================
-      const {
-        data: packedData,
-        error: packedError,
-      } = await supabase
-        .from("packing")
-        .select("sku, qty")
-        .eq("order_no", orderNo);
-
-      if (packedError) {
-        alert(packedError.message);
-        return;
-      }
-
-      // =====================================================
-      // TOTAL PICKING PER SKU
-      // =====================================================
-      const pickedBySku: Record<
-        string,
-        number
-      > = {};
-
-      (pickingData || []).forEach(
-        (item: any) => {
-          const sku = String(
-            item.sku || ""
-          )
-            .trim()
-            .toUpperCase();
-
-          if (!sku) return;
-
-          pickedBySku[sku] =
-            (pickedBySku[sku] || 0) +
-            Number(
-              item.qty_picked || 0
-            );
-        }
-      );
-
-      // =====================================================
-      // TOTAL PACKING PER SKU
-      // =====================================================
-      const packedBySku: Record<
-        string,
-        number
-      > = {};
-
-      (packedData || []).forEach(
-        (item: any) => {
-          const sku = String(
-            item.sku || ""
-          )
-            .trim()
-            .toUpperCase();
-
-          if (!sku) return;
-
-          packedBySku[sku] =
-            (packedBySku[sku] || 0) +
-            Number(item.qty || 0);
-        }
-      );
-
-      // =====================================================
+      // =================================================
       // CEK SEMUA SKU
-      // =====================================================
-      const belumSelesai: string[] =
+      // =================================================
+
+      const notPacked: string[] =
         [];
 
-      Object.entries(
-        pickedBySku
-      ).forEach(
-        ([sku, qtyPicked]) => {
-          const qtyPacked =
-            packedBySku[sku] || 0;
+      pickedMap.forEach(
+        (pickedQty, sku) => {
+          const packedQty =
+            packedMap.get(sku) ||
+            0;
 
           if (
-            qtyPacked < qtyPicked
+            packedQty <
+            pickedQty
           ) {
-            belumSelesai.push(
-              `${sku}: sisa ${
-                qtyPicked -
-                qtyPacked
-              }`
+            notPacked.push(
+              sku
             );
           }
         }
       );
 
-      // =====================================================
-      // BELUM SELESAI
-      // =====================================================
       if (
-        belumSelesai.length > 0
+        notPacked.length > 0
       ) {
         alert(
-          "Masih ada item yang belum selesai dipacking.\n\n" +
-            belumSelesai.join("\n")
+          `Packing belum selesai.\n\n` +
+            `SKU yang belum selesai:\n` +
+            notPacked.join("\n")
         );
 
         return;
       }
 
-      // =====================================================
-      // UPDATE STATUS
-      // =====================================================
+      // =================================================
+      // UPDATE STATUS ORDER
+      // =================================================
+
       const {
-        error: updateError,
+        error: statusError,
       } = await supabase
         .from("order_header")
         .update({
@@ -790,20 +1111,30 @@ export default function PackingPage() {
           orderNo
         );
 
-      if (updateError) {
-        alert(updateError.message);
+      if (statusError) {
+        alert(
+          `Gagal update status order:\n${statusError.message}`
+        );
+
         return;
       }
 
+      // =================================================
+      // SUCCESS
+      // =================================================
+
       alert(
-        "Packing Complete"
+        "Packing Complete.\n\nOrder sudah selesai dipacking."
       );
 
       router.push(
         "/outbound/packing"
       );
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.error(
+        "Finish packing error:",
+        error
+      );
 
       alert(
         "Terjadi kesalahan saat menyelesaikan packing."
@@ -814,370 +1145,588 @@ export default function PackingPage() {
   }
 
   // =====================================================
-  // PROGRESS
-  // =====================================================
-  const progress =
-    items.length > 0
-      ? Math.round(
-          ((currentIndex + 1) /
-            items.length) *
-            100
-        )
-      : 100;
-
-  // =====================================================
   // RENDER
   // =====================================================
+
   return (
-    <div className="min-h-screen bg-slate-50 p-6">
+    <div className="min-h-screen bg-slate-50">
+
       {/* =================================================
           HEADER
       ================================================= */}
-      <div className="flex justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">
-            Packing Order
-          </h1>
 
-          <p className="text-gray-500">
-            Picklist : {orderNo}
-          </p>
-        </div>
+      <div className="sticky top-0 z-20 bg-white border-b">
+        <div className="max-w-2xl mx-auto px-4 py-4">
 
-        <div className="flex gap-2">
-          <button
-            onClick={() =>
-              router.back()
-            }
-            className="flex items-center gap-2 bg-gray-500 text-white px-3 py-2 rounded-lg hover:bg-gray-600 transition"
-          >
-            <ArrowLeftCircle
-              size={20}
-            />
+          <div className="flex items-center justify-between gap-3">
 
-            <span>Back</span>
-          </button>
+            <div className="min-w-0">
 
-          <button
-            onClick={
-              finishPacking
-            }
-            disabled={saving}
-            className="bg-green-600 text-white px-4 py-2 rounded disabled:opacity-50"
-          >
-            {saving
-              ? "Processing..."
-              : "Finish Packing"}
-          </button>
-        </div>
-      </div>
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-800">
+                Packing Order
+              </h1>
 
-      {/* =================================================
-          PROGRESS
-      ================================================= */}
-      <div className="bg-white p-4 rounded shadow mb-5">
-        <div className="flex justify-between">
-          <div>
-            Progress :{" "}
-            {items.length === 0
-              ? 0
-              : currentIndex + 1}
-            {" / "}
-            {items.length}
-          </div>
-
-          <div>
-            {progress}%
-          </div>
-        </div>
-
-        <div className="mt-3 h-2 bg-gray-200 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-blue-600 transition-all duration-300"
-            style={{
-              width: `${progress}%`,
-            }}
-          />
-        </div>
-      </div>
-
-      {/* =================================================
-          CONTENT
-      ================================================= */}
-      {loading ? (
-        <div className="bg-white rounded shadow p-10">
-          Loading...
-        </div>
-      ) : !currentItem ? (
-        <div className="bg-white rounded shadow p-10 text-center">
-          <h2 className="text-xl font-bold text-green-600">
-            Semua Item Sudah Dipacking
-          </h2>
-
-          <p className="mt-2">
-            Klik Finish Packing untuk
-            menyelesaikan Order.
-          </p>
-        </div>
-      ) : (
-        <div className="bg-white rounded shadow p-6">
-          {/* =================================================
-              SCAN SKU
-          ================================================= */}
-          <div className="mb-4">
-            <label className="block mb-2 font-semibold">
-              Scan Product / SKU
-            </label>
-
-            <input
-              value={scanSku}
-              onChange={(e) =>
-                setScanSku(
-                  e.target.value
-                )
-              }
-              className="border rounded p-2 w-full"
-              placeholder="Scan SKU"
-              disabled={saving}
-              autoFocus
-            />
-          </div>
-
-          {/* =================================================
-              DETAIL SKU OTOMATIS
-          ================================================= */}
-          {scanSku.trim() && (
-            <div className="mb-5 rounded-lg border bg-slate-50 p-4">
-              {scannedItem ? (
-                <>
-                  <div className="mb-3 text-sm font-semibold text-gray-500">
-                    DETAIL PRODUCT
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* SKU */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500 mb-1">
-                        SKU
-                      </label>
-
-                      <div className="text-lg font-bold text-blue-600">
-                        {
-                          scannedItem.sku
-                        }
-                      </div>
-                    </div>
-
-                    {/* DESKRIPSI */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500 mb-1">
-                        Deskripsi
-                      </label>
-
-                      <div className="font-medium">
-                        {scannedItem.deskripsi ||
-                          "-"}
-                      </div>
-                    </div>
-
-                    {/* TOTAL KEBUTUHAN SKU */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500 mb-1">
-                        Total Kebutuhan SKU
-                      </label>
-
-                      <div className="text-lg font-bold">
-                        {
-                          scannedItem.qty_picked
-                        }
-                      </div>
-                    </div>
-
-                    {/* QTY SUDAH PACKING */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500 mb-1">
-                        Qty Sudah Packing
-                      </label>
-
-                      <div className="font-bold text-green-600">
-                        {
-                          scannedItem.qty_packed ||
-                          0
-                        }
-                      </div>
-                    </div>
-
-                    {/* QTY SISA */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-500 mb-1">
-                        Qty Sisa
-                      </label>
-
-                      <div className="text-lg font-bold text-red-600">
-                        {Number(
-                          scannedItem.qty_picked
-                        ) -
-                          Number(
-                            scannedItem.qty_packed ||
-                              0
-                          )}
-                      </div>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="text-red-600 font-medium">
-                  SKU tidak ditemukan dalam
-                  Picklist
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* =================================================
-              DESKRIPSI
-          ================================================= */}
-          <div className="mb-4">
-            <label className="block mb-2 font-semibold">
-              Deskripsi
-            </label>
-
-            <input
-              value={
-                scannedItem
-                  ? displayDescription
-                  : ""
-              }
-              readOnly
-              className="border rounded p-2 w-full bg-gray-100"
-              placeholder="Deskripsi otomatis berdasarkan SKU"
-            />
-          </div>
-
-          {/* =================================================
-              TOTAL KEBUTUHAN SKU
-          ================================================= */}
-          <div className="mb-4">
-            <label className="block mb-2 font-semibold">
-              Total Kebutuhan SKU
-            </label>
-
-            <input
-              value={
-                scannedItem
-                  ? displayQtyPicked
-                  : ""
-              }
-              readOnly
-              className="border rounded p-2 w-full bg-gray-100"
-              placeholder="Total kebutuhan otomatis berdasarkan SKU"
-            />
-          </div>
-
-          {/* =================================================
-              CARTON
-          ================================================= */}
-          <div className="mb-4">
-            <label className="block mb-2 font-semibold">
-              Carton No
-            </label>
-
-            <input
-              value={cartonNo}
-              onChange={(e) =>
-                setCartonNo(
-                  e.target.value
-                )
-              }
-              className="border rounded p-2 w-full"
-              placeholder="Contoh : CTN001"
-              disabled={saving}
-            />
-          </div>
-
-          {/* =================================================
-              QTY PACKING
-          ================================================= */}
-          <div className="mb-4">
-            <label className="block mb-2 font-semibold">
-              Qty Packing
-            </label>
-
-            <input
-              type="number"
-              min="1"
-              value={packQty}
-              onChange={(e) =>
-                setPackQty(
-                  e.target.value
-                )
-              }
-              className="border rounded p-2 w-full"
-              disabled={saving}
-              placeholder={
-                scannedItem
-                  ? `Maksimal ${displayQtySisa}`
-                  : "Masukkan Qty"
-              }
-            />
-
-            {scannedItem && (
-              <p className="text-sm text-gray-500 mt-1">
-                Qty maksimal yang dapat
-                dipacking:{" "}
-                <span className="font-bold">
-                  {
-                    displayQtySisa
-                  }
-                </span>
+              <p className="text-sm text-slate-500 truncate">
+                {orderNo}
               </p>
-            )}
+
+              {customerName && (
+                <p className="text-xs text-slate-400 truncate mt-1">
+                  Customer: {customerName}
+                </p>
+              )}
+
+            </div>
+
+            <div className="flex gap-2">
+
+              <button
+                onClick={() =>
+                  router.back()
+                }
+                disabled={saving}
+                className="flex items-center justify-center gap-2 bg-slate-600 text-white px-3 py-2 rounded-lg hover:bg-slate-700 transition disabled:opacity-50"
+              >
+                <ArrowLeftCircle
+                  size={19}
+                />
+
+                <span className="hidden sm:inline">
+                  Back
+                </span>
+              </button>
+
+              <button
+                onClick={
+                  finishPacking
+                }
+                disabled={
+                  saving ||
+                  items.length > 0 ||
+                  !pickingComplete
+                }
+                className="flex items-center gap-2 bg-green-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:bg-green-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <PackageCheck
+                  size={18}
+                />
+
+                <span className="hidden sm:inline">
+                  Finish Packing
+                </span>
+
+                <span className="sm:hidden">
+                  Finish
+                </span>
+              </button>
+
+            </div>
+
           </div>
 
-          {/* =================================================
-              BERAT
-          ================================================= */}
-          <div className="mb-6">
-            <label className="block mb-2 font-semibold">
-              Berat (Kg)
-            </label>
-
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={weight}
-              onChange={(e) =>
-                setWeight(
-                  e.target.value
-                )
-              }
-              className="border rounded p-2 w-full"
-              placeholder="Opsional"
-              disabled={saving}
-            />
-          </div>
-
-          {/* =================================================
-              CONFIRM
-          ================================================= */}
-          <button
-            onClick={
-              confirmPacking
-            }
-            disabled={
-              saving ||
-              !scanSku.trim() ||
-              !scannedItem
-            }
-            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded disabled:opacity-50"
-          >
-            {saving
-              ? "Saving..."
-              : "Confirm Packing"}
-          </button>
         </div>
-      )}
+      </div>
+
+      {/* =================================================
+          MAIN
+      ================================================= */}
+
+      <div className="max-w-2xl mx-auto px-4 py-5">
+
+        
+        {/* =================================================
+            PICKING STATUS
+        ================================================= */}
+
+        {!loading && (
+          <div
+            className={`mb-5 rounded-xl border p-4 ${
+              pickingComplete
+                ? "bg-green-50 border-green-200"
+                : "bg-yellow-50 border-yellow-200"
+            }`}
+          >
+
+            <div className="flex items-start gap-3">
+
+              {pickingComplete ? (
+                <CheckCircle2
+                  size={22}
+                  className="text-green-600 mt-0.5"
+                />
+              ) : (
+                <Clock3
+                  size={22}
+                  className="text-yellow-600 mt-0.5"
+                />
+              )}
+
+              <div>
+
+                <div
+                  className={`font-bold ${
+                    pickingComplete
+                      ? "text-green-800"
+                      : "text-yellow-800"
+                  }`}
+                >
+                  {pickingComplete
+                    ? "Picking sudah selesai"
+                    : "Picking masih berjalan"}
+                </div>
+
+                <div
+                  className={`text-sm mt-1 ${
+                    pickingComplete
+                      ? "text-green-700"
+                      : "text-yellow-700"
+                  }`}
+                >
+                  {pickingComplete
+                    ? "Semua item sudah dipick dan dapat diproses untuk packing."
+                    : "Hasil picking yang sudah berhasil tetap dapat langsung dipacking."}
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+        )}
+
+        {/* =================================================
+            REFRESH
+        ================================================= */}
+
+        {!loading && (
+          <div className="flex justify-end mb-3">
+
+            <button
+              onClick={() =>
+                loadData(true)
+              }
+              disabled={saving}
+              className="flex items-center gap-2 text-sm text-slate-500 hover:text-blue-600"
+            >
+
+              <RefreshCw
+                size={15}
+              />
+
+              Refresh
+
+              <span className="text-xs text-slate-400">
+                {lastRefresh.toLocaleTimeString()}
+              </span>
+
+            </button>
+
+          </div>
+        )}
+
+        {/* =================================================
+            LOADING
+        ================================================= */}
+
+        {loading ? (
+
+          <div className="bg-white rounded-xl shadow-sm border p-8 text-center">
+
+            <div className="animate-pulse text-slate-500">
+              Loading data packing...
+            </div>
+
+          </div>
+
+        ) : items.length === 0 ? (
+
+          /* =================================================
+             EMPTY
+          ================================================= */
+
+          <div className="bg-white rounded-xl shadow-sm border p-8 text-center">
+
+            <CheckCircle2
+              size={52}
+              className="mx-auto text-green-500 mb-3"
+            />
+
+            <h2 className="text-xl font-bold text-slate-800">
+              Semua packing selesai
+            </h2>
+
+            <p className="text-slate-500 mt-1">
+              Semua hasil picking untuk order ini
+              sudah selesai dipacking.
+            </p>
+
+            <p className="text-sm text-green-600 mt-3">
+              Order siap untuk Finish Packing.
+            </p>
+
+          </div>
+
+        ) : (
+
+          <div className="space-y-5">
+
+            {/* =================================================
+                STEP 1 - PILIH SKU
+            ================================================= */}
+
+            <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+
+              <div className="px-4 py-3 border-b bg-slate-50">
+
+                <div className="flex items-center gap-2">
+
+                 
+                  <div>
+
+                    <h2 className="font-bold text-slate-800">
+                      Pilih SKU
+                    </h2>
+
+                   
+                  </div>
+
+                </div>
+
+              </div>
+
+              <div className="p-4">
+
+               
+
+                <select
+                  id="packing-sku-select"
+                  value={selectedSku}
+                  onChange={(e) =>
+                    handleSkuChange(
+                      e.target.value
+                    )
+                  }
+                  disabled={saving}
+                  className="w-full border border-slate-300 rounded-xl px-4 py-3 bg-white text-base font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100"
+                >
+
+                  
+
+                  {skuOptions.map(
+                    (item) => (
+                      <option
+                        key={item.sku}
+                        value={item.sku}
+                      >
+                        {item.sku}
+                      </option>
+                    )
+                  )}
+
+                </select>
+
+              </div>
+
+            </div>
+
+            {/* =================================================
+                STEP 2 - DETAIL SKU
+                HANYA INFORMASI PENTING
+            ================================================= */}
+
+            {currentItem && (
+
+              <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+
+                <div className="px-4 py-3 border-b bg-slate-50">
+
+                  <div className="flex items-center gap-2">
+   
+
+                  </div>
+
+                </div>
+
+                <div className="p-4">
+
+                  {/* SKU + DESKRIPSI */}
+
+                  <div className="mb-2">
+
+                    <div className="text-xs text-slate-500">
+                      SKU
+                    </div>
+                    <div className="text-xl sm:text-xl font-bold text-blue-700 break-all">
+                      {currentItem.sku}
+                    </div>
+
+                    <div className="text-sm text-slate-600 mt-1">
+                      {currentItem.deskripsi ||
+                        "Deskripsi tidak ditemukan"}
+                    </div>
+
+                  </div>
+
+                  {/* QTY */}
+
+                  <div className="grid grid-cols-3 gap-2 sm:gap-4">
+
+                    <div className="rounded-xl bg-blue-50 border border-blue-100 p-3">
+
+                      <div className="text-xs text-slate-500">
+                        Qty Dibutuhkan
+                      </div>
+
+                      <div className="text-xl sm:text-2xl font-bold text-blue-700">
+                        {currentItem.qty_picked}
+                      </div>
+
+                    </div>
+
+                    <div className="rounded-xl bg-green-50 border border-green-100 p-3">
+
+                      <div className="text-xs text-slate-500">
+                        Qty Packed
+                      </div>
+
+                      <div className="text-xl sm:text-2xl font-bold text-green-600">
+                        {currentItem.qty_packed}
+                      </div>
+
+                    </div>
+
+                    <div className="rounded-xl bg-red-50 border border-red-100 p-3">
+
+                      <div className="text-xs text-slate-500">
+                        Sisa
+                      </div>
+
+                      <div className="text-xl sm:text-2xl font-bold text-red-600">
+                        {remainingQty}
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            )}
+
+            {/* =================================================
+                STEP 3 - SCAN SKU
+            ================================================= */}
+
+            {currentItem && (
+
+              <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+
+                <div className="px-4 py-3 border-b bg-slate-50">
+
+                  <div className="flex items-center gap-2">
+
+                 
+                  </div>
+
+                </div>
+
+                <div className="p-4">
+
+                  <div className="relative">
+
+                    <ScanLine
+                      size={19}
+                      className={`absolute left-3 top-1/2 -translate-y-1/2 ${
+                        skuValidated
+                          ? "text-green-500"
+                          : "text-slate-400"
+                      }`}
+                    />
+
+                    <input
+                      id="scan-sku-input"
+                      autoFocus
+                      autoComplete="off"
+                      autoCorrect="off"
+                      spellCheck={false}
+                      value={scanSku}
+                      onChange={(e) =>
+                        handleScanSku(
+                          e.target.value
+                        )
+                      }
+                      disabled={saving}
+                      className={`w-full border rounded-xl px-10 py-3 text-lg font-semibold uppercase focus:outline-none focus:ring-2 ${
+                        skuValidated
+                          ? "border-green-500 bg-green-50 text-green-700 focus:ring-green-400"
+                          : scanSku
+                          ? "border-red-400 bg-red-50 text-red-700 focus:ring-red-400"
+                          : "border-slate-300 focus:ring-blue-500"
+                      }`}
+                      placeholder="Scan SKU..."
+                    />
+
+                  </div>
+
+                
+
+                  {/* INVALID */}
+
+                  {!skuValidated &&
+                    scanSku && (
+
+                      <div className="mt-3 rounded-lg bg-red-50 border border-red-200 px-3 py-3 text-red-600">
+
+                        <div className="font-bold">
+                          SKU tidak sesuai
+                        </div>
+
+                        <div className="text-sm mt-1">
+                          Hasil scan:
+                          <span className="font-bold ml-1">
+                            {scanSku}
+                          </span>
+                        </div>
+
+                      </div>
+
+                    )}
+
+                </div>
+
+              </div>
+
+            )}
+
+            {/* =================================================
+                STEP 4 - PACKING
+            ================================================= */}
+
+            {skuValidated &&
+              currentItem && (
+
+                <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+
+                  <div className="px-4 py-3 border-b bg-slate-50">
+
+                    <div className="flex items-center gap-2">
+
+                     
+
+                      <div>
+
+
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                  <div className="p-4">
+
+                    {/* QTY PACKING */}
+
+                    <label className="block text-sm font-semibold text-slate-700 mb-2">
+                      Qty yang Dipacking
+                    </label>
+
+                    <input
+                      id="pack-qty-input"
+                      type="number"
+                      min="1"
+                      max={remainingQty}
+                      value={packQty}
+                      onChange={(e) =>
+                        setPackQty(
+                          e.target.value
+                        )
+                      }
+                      disabled={saving}
+                      className="w-full border border-slate-300 rounded-xl px-4 py-4 text-2xl font-bold text-center focus:outline-none focus:ring-2 focus:ring-green-500"
+                      placeholder="0"
+                    />
+
+                    {/* CARTON */}
+
+                    <label className="block text-sm font-semibold text-slate-700 mb-2 mt-4">
+                      Nomor Carton
+                    </label>
+
+                    <input
+                      type="text"
+                      autoComplete="off"
+                      value={cartonNo}
+                      onChange={(e) =>
+                        setCartonNo(
+                          e.target.value
+                        )
+                      }
+                      disabled={saving}
+                      className="w-full border border-slate-300 rounded-xl px-4 py-3 text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Contoh: CTN-001"
+                    />
+
+                    {/* WEIGHT */}
+
+                    <label className="block text-sm font-semibold text-slate-700 mb-2 mt-4">
+                      Weight
+                    </label>
+
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={weight}
+                      onChange={(e) =>
+                        setWeight(
+                          e.target.value
+                        )
+                      }
+                      disabled={saving}
+                      className="w-full border border-slate-300 rounded-xl px-4 py-3 text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Contoh: 2.5"
+                    />
+
+                    {/* CONFIRM */}
+
+                    <button
+                      onClick={
+                        confirmPacking
+                      }
+                      disabled={
+                        saving ||
+                        !packQty ||
+                        !cartonNo.trim()
+                      }
+                      className="w-full mt-5 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-5 py-4 rounded-xl text-lg font-bold transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+
+                      <PackageCheck
+                        size={22}
+                      />
+
+                      {saving
+                        ? "Processing..."
+                        : "Confirm Packing"}
+
+                    </button>
+
+                  </div>
+
+                </div>
+
+              )}
+
+           
+
+          </div>
+
+        )}
+
+      </div>
+
     </div>
   );
 }
