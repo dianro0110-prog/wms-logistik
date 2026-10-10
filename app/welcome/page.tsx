@@ -1,10 +1,12 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { supabase } from "../../lib/supabase";
+
 import {
-  Warehouse,
   Boxes,
   PackageCheck,
   ScanLine,
@@ -18,13 +20,16 @@ export default function WelcomePage() {
   const [username, setUsername] = useState("Loading...");
 
   useEffect(() => {
+    let mounted = true;
+
     const loadUser = async () => {
       const {
         data: { user },
+        error,
       } = await supabase.auth.getUser();
 
-      if (!user) {
-        router.push("/");
+      if (error || !user) {
+        router.replace("/");
         return;
       }
 
@@ -34,19 +39,23 @@ export default function WelcomePage() {
         .eq("id", user.id)
         .single();
 
-      setUsername(profile?.username || user.email || "User");
+      if (mounted) {
+        setUsername(profile?.username || user.email || "User");
+      }
     };
 
     loadUser();
+
+    return () => {
+      mounted = false;
+    };
   }, [router]);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-700 via-slate-600 to-slate-500">
-
       {/* ================= BACKGROUND ================= */}
 
       <div className="absolute inset-0">
-
         {/* Blue glow */}
         <div className="absolute -left-40 -top-40 h-[500px] w-[500px] rounded-full bg-blue-400/10 blur-3xl" />
 
@@ -61,160 +70,109 @@ export default function WelcomePage() {
             backgroundSize: "45px 45px",
           }}
         />
-
       </div>
 
       {/* ================= CONTENT ================= */}
 
       <main className="relative z-10 min-h-screen">
-
         <div className="mx-auto flex min-h-screen max-w-[1200px] flex-col justify-center px-8 py-12 lg:px-12">
-
           {/* ================= ONLINE BADGE ================= */}
 
           <div className="mb-6">
-
             <div
               className="
-                inline-flex
-                items-center
-                gap-2
-                rounded-full
-                border
-                border-white/25
-                bg-white/10
-                px-4
-                py-2
-                text-sm
-                font-semibold
-                text-white
-                shadow-lg
-                backdrop-blur-md
+                inline-flex items-center gap-2
+                rounded-full border border-white/25
+                bg-white/10 px-4 py-2
+                text-sm font-semibold text-white
+                shadow-lg backdrop-blur-md
               "
             >
-
               <span className="relative flex h-2.5 w-2.5">
-
                 <span
                   className="
-                    absolute
-                    inline-flex
-                    h-full
-                    w-full
-                    animate-ping
-                    rounded-full
-                    bg-emerald-400
-                    opacity-75
+                    absolute inline-flex h-full w-full
+                    animate-ping rounded-full
+                    bg-emerald-400 opacity-75
                   "
                 />
 
                 <span
                   className="
-                    relative
-                    inline-flex
-                    h-2.5
-                    w-2.5
-                    rounded-full
-                    bg-emerald-400
+                    relative inline-flex h-2.5 w-2.5
+                    rounded-full bg-emerald-400
                   "
                 />
-
               </span>
 
               Warehouse System Online
-
             </div>
-
           </div>
 
           {/* ================= BRAND ================= */}
 
-          <div className="mb-6 flex items-center gap-4">
+<div className="mb-6 flex items-center gap-4">
+  {/* LOGO PNG */}
+  <div
+    className="
+      flex h-14 w-14 shrink-0
+      items-center justify-center
+      overflow-hidden rounded-2xl
+      border border-white/25
+      bg-white p-0.5
+      shadow-lg
+    "
+  >
+    <Image
+      src="/logozeewms.png"
+      alt="Zee-WMS Logo"
+      width={80}
+      height={80}
+      priority
+      className="h-full w-full object-contain"
+    />
+  </div>
 
-            <div
-              className="
-                flex
-                h-14
-                w-14
-                items-center
-                justify-center
-                rounded-2xl
-                border
-                border-white/25
-                bg-white/10
-                shadow-lg
-                backdrop-blur-md
-              "
-            >
-
-              <Warehouse
-                size={30}
-                className="text-white"
-              />
-
-            </div>
 
             <div>
-
               <p
                 className="
-                  text-sm
-                  font-bold
-                  tracking-[0.25em]
-                  text-blue-200
+                  text-sm font-bold
+                  tracking-[0.25em] text-blue-200
                 "
               >
-                Zee-WMS
+                Zee Wms
               </p>
-
-              <p className="text-sm text-white/70">
-                
-              </p>
-
             </div>
-
           </div>
 
           {/* ================= HERO ================= */}
 
           <div className="max-w-4xl">
-
             <h1
               className="
-                text-5xl
-                font-bold
-                leading-tight
-                tracking-tight
-                text-white
-                md:text-6xl
-                lg:text-7xl
+                text-5xl font-bold leading-tight
+                tracking-tight text-white
+                md:text-6xl lg:text-4xl
               "
             >
-
-              Let's Growt 🚀
-
+              Let&apos;s Growt 🚀
             </h1>
 
             <p
               className="
-                mt-7
-                max-w-2xl
-                text-base
-                leading-relaxed
-                text-white/80
+                mt-7 max-w-2xl text-base
+                leading-relaxed text-white/80
                 md:text-lg
               "
             >
               Manage your warehouse operations efficiently.
-              
             </p>
-
           </div>
 
           {/* ================= USER ================= */}
 
           <div className="mt-5">
-
             <p className="text-sm text-white/60">
               Welcome back,
             </p>
@@ -222,228 +180,141 @@ export default function WelcomePage() {
             <p className="text-xl font-bold text-white">
               {username}
             </p>
-
           </div>
 
           {/* ================= QUICK MODULE ================= */}
 
           <div
             className="
-              mt-9
-              grid
-              max-w-5xl
-              grid-cols-1
-              gap-4
-              sm:grid-cols-3
+              mt-9 grid max-w-5xl
+              grid-cols-1 gap-4 sm:grid-cols-3
             "
           >
-
             {/* INBOUND */}
 
             <div
               className="
-                group
-                rounded-2xl
-                border
-                border-blue-400/20
-                bg-blue-950/90
-                p-4
-                shadow-lg
-                transition-all
-                duration-300
-                hover:-translate-y-1
-                hover:bg-blue-900
+                group rounded-2xl
+                border border-blue-400/20
+                bg-blue-950/90 p-4
+                shadow-lg transition-all duration-300
+                hover:-translate-y-1 hover:bg-blue-900
               "
             >
-
               <div className="flex items-center gap-3">
-
                 <div
                   className="
-                    flex
-                    h-10
-                    w-10
-                    shrink-0
-                    items-center
-                    justify-center
-                    rounded-xl
-                    bg-blue-800
+                    flex h-10 w-10 shrink-0
+                    items-center justify-center
+                    rounded-xl bg-blue-800
                   "
                 >
-
-                  <Boxes
-                    size={21}
-                    className="text-blue-300"
-                  />
-
+                  <Boxes size={21} className="text-blue-300" />
                 </div>
 
                 <div>
-
                   <p className="text-sm font-bold text-white">
                     Inbound
                   </p>
 
                   <p className="text-xs text-blue-200">
-                    Receiving, Checking, & Putaway
+                    Receiving, Checking, &amp; Putaway
                   </p>
-
                 </div>
-
               </div>
-
             </div>
 
             {/* INVENTORY */}
 
             <div
               className="
-                group
-                rounded-2xl
-                border
-                border-emerald-400/20
-                bg-emerald-950/90
-                p-4
-                shadow-lg
-                transition-all
-                duration-300
-                hover:-translate-y-1
-                hover:bg-emerald-900
+                group rounded-2xl
+                border border-emerald-400/20
+                bg-emerald-950/90 p-4
+                shadow-lg transition-all duration-300
+                hover:-translate-y-1 hover:bg-emerald-900
               "
             >
-
               <div className="flex items-center gap-3">
-
                 <div
                   className="
-                    flex
-                    h-10
-                    w-10
-                    shrink-0
-                    items-center
-                    justify-center
-                    rounded-xl
-                    bg-emerald-800
+                    flex h-10 w-10 shrink-0
+                    items-center justify-center
+                    rounded-xl bg-emerald-800
                   "
                 >
-
                   <PackageCheck
                     size={21}
                     className="text-emerald-300"
                   />
-
                 </div>
 
                 <div>
-
                   <p className="text-sm font-bold text-white">
                     Inventory
                   </p>
 
                   <p className="text-xs text-emerald-200">
-                    Inventory List & Movement
+                    Inventory List &amp; Movement
                   </p>
-
                 </div>
-
               </div>
-
             </div>
 
             {/* OUTBOUND */}
 
             <div
               className="
-                group
-                rounded-2xl
-                border
-                border-red-400/20
-                bg-red-950/90
-                p-4
-                shadow-lg
-                transition-all
-                duration-300
-                hover:-translate-y-1
-                hover:bg-red-900
+                group rounded-2xl
+                border border-red-400/20
+                bg-red-950/90 p-4
+                shadow-lg transition-all duration-300
+                hover:-translate-y-1 hover:bg-red-900
               "
             >
-
               <div className="flex items-center gap-3">
-
                 <div
                   className="
-                    flex
-                    h-10
-                    w-10
-                    shrink-0
-                    items-center
-                    justify-center
-                    rounded-xl
-                    bg-orange-800
+                    flex h-10 w-10 shrink-0
+                    items-center justify-center
+                    rounded-xl bg-orange-800
                   "
                 >
-
                   <ScanLine
                     size={21}
                     className="text-orange-300"
                   />
-
                 </div>
 
                 <div>
-
                   <p className="text-sm font-bold text-white">
                     Outbound
                   </p>
 
                   <p className="text-xs text-red-200">
-                    Picking, Packing & Shipment
+                    Picking, Packing &amp; Shipment
                   </p>
-
                 </div>
-
               </div>
-
             </div>
-
           </div>
 
           {/* ================= BUTTONS ================= */}
 
-          <div
-            className="
-              mt-9
-              flex
-              flex-col
-              gap-4
-              sm:flex-row
-            "
-          >
-
+          <div className="mt-9 flex flex-col gap-4 sm:flex-row">
             {/* DASHBOARD */}
 
             <button
+              type="button"
               onClick={() => router.push("/dashboard")}
               className="
-                group
-                flex
-                items-center
-                justify-center
-                gap-3
-                rounded-xl
-                bg-white
-                px-7
-                py-3.5
-                font-bold
-                text-slate-800
-                shadow-xl
-                transition-all
-                duration-300
-                hover:-translate-y-1
-                hover:bg-blue-50
+                group flex items-center justify-center gap-3
+                rounded-xl bg-white px-7 py-3.5
+                font-bold text-slate-800 shadow-xl
+                transition-all duration-300
+                hover:-translate-y-1 hover:bg-blue-50
               "
             >
-
               <LayoutDashboard
                 size={20}
                 className="text-blue-700"
@@ -454,88 +325,57 @@ export default function WelcomePage() {
               <ArrowRight
                 size={18}
                 className="
-                  transition-transform
-                  duration-300
+                  transition-transform duration-300
                   group-hover:translate-x-1
                 "
               />
-
             </button>
 
             {/* LET'S GO */}
 
             <button
+              type="button"
               onClick={() => router.push("/system")}
               className="
-                group
-                flex
-                items-center
-                justify-center
-                gap-3
-                rounded-xl
-                bg-blue-600
-                px-7
-                py-3.5
-                font-bold
-                text-white
-                shadow-xl
-                transition-all
-                duration-300
-                hover:-translate-y-1
-                hover:bg-blue-500
+                group flex items-center justify-center gap-3
+                rounded-xl bg-blue-600 px-7 py-3.5
+                font-bold text-white shadow-xl
+                transition-all duration-300
+                hover:-translate-y-1 hover:bg-blue-500
               "
             >
-
               🚀
 
-              Let's Go
+              Let&apos;s Go
 
               <ArrowRight
                 size={18}
                 className="
-                  transition-transform
-                  duration-300
+                  transition-transform duration-300
                   group-hover:translate-x-1
                 "
               />
-
             </button>
-
           </div>
 
           {/* ================= FOOTER ================= */}
 
           <div
             className="
-              mt-10
-              flex
-              items-center
-              gap-3
-              text-sm
-              text-white/50
+              mt-10 flex items-center gap-3
+              text-sm text-white/50
             "
           >
-
             <div className="h-px w-10 bg-white/20" />
 
-            <span>
-              Warehouse Management System
-            </span>
+            <span>Warehouse Management System</span>
 
-            <span className="text-white/30">
-              •
-            </span>
+            <span className="text-white/30">•</span>
 
-            <span>
-              Version 1.0
-            </span>
-
+            <span>Version 1.0</span>
           </div>
-
         </div>
-
       </main>
-
     </div>
   );
 }

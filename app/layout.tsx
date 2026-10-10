@@ -3,16 +3,16 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "WMS Mobile",
-    template: "%s | WMS Mobile",
+    default: "Zee Wms",
+    template: "%s | Zee Wms",
   },
   description: "Warehouse Management System",
-  applicationName: "WMS Mobile",
+  applicationName: "Zee Wms",
   manifest: "/manifest.json",
   themeColor: "#7c3aed",
   icons: {
-    icon: "/favicon.ico",
-    apple: "/icon-192.png",
+    icon: "/Zee Warehouse Management Logo",
+    apple: "/Zee Warehouse Management Logo.png",
   },
 };
 

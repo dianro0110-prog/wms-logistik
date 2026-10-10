@@ -82,19 +82,32 @@ export default function MobileLogin({
           }}
         >
           <div
-            style={{
-              width: 75,
-              height: 75,
-              borderRadius: 16,
-              background: "#03163f",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              color: "#fff",
-            }}
-          >
-            <LogIn size={32} />
-          </div>
+  style={{
+    background: "#ffffff",
+    width: "80px",
+    height: "80px",
+    borderRadius: "15px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    padding: "4px",
+    boxSizing: "border-box",
+    boxShadow: "0 4px 12px rgba(3, 22, 63, 0.15)",
+  }}
+>
+  <img
+    src="/logozeewms.png"
+    alt="Zee-WMS Logo"
+    width={72}
+    height={72}
+    style={{
+      width: "100%",
+      height: "100%",
+      objectFit: "contain",
+    }}
+  />
+</div>
         </div>
 
         {/* TITLE */}
@@ -106,7 +119,7 @@ export default function MobileLogin({
             marginBottom: 8,
           }}
         >
-          Login WMS
+          Login Wms
         </h2>
 
         <p

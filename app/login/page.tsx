@@ -598,19 +598,32 @@ if (isMobileApp === null) {
         }}
       >
         <div
-          style={{
-            background: "#03163f",
-            width: "70px",
-            height: "70px",
-            borderRadius: "15px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "#fff",
-          }}
-        >
-          <LogIn size={30} />
-        </div>
+  style={{
+    background: "#ffffff",
+    width: "80px",
+    height: "80px",
+    borderRadius: "15px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    padding: "4px",
+    boxSizing: "border-box",
+    boxShadow: "0 4px 12px rgba(3, 22, 63, 0.15)",
+  }}
+>
+  <img
+    src="/logozeewms.png"
+    alt="Zee-WMS Logo"
+    width={72}
+    height={72}
+    style={{
+      width: "100%",
+      height: "100%",
+      objectFit: "contain",
+    }}
+  />
+</div>
       </div>
 
       <h2
@@ -620,7 +633,7 @@ if (isMobileApp === null) {
           fontWeight: "bold",
         }}
       >
-        Masuk ke Dashboard
+        Login Wms
       </h2>
 
       <p

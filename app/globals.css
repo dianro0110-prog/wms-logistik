@@ -171,3 +171,43 @@
     font-family: Arial, Helvetica, sans-serif;
   }
 }
+
+
+/* =========================================
+   ZEE-WMS LOGO COIN SPIN ANIMATION
+========================================= */
+
+.coin-spin-container {
+  perspective: 1000px;
+}
+
+.coin-spin {
+  display: block;
+  transform-style: preserve-3d;
+  transform-origin: center center;
+  animation: zee-coin-spin 4s linear infinite;
+  will-change: transform;
+  backface-visibility: visible;
+  filter: drop-shadow(
+    0 8px 12px rgba(15, 23, 42, 0.22)
+  );
+}
+
+@keyframes zee-coin-spin {
+  from {
+    transform: rotateY(0deg);
+  }
+
+  to {
+    transform: rotateY(360deg);
+  }
+}
+
+/* Aksesibilitas: kurangi animasi jika diminta sistem */
+
+@media (prefers-reduced-motion: reduce) {
+  .coin-spin {
+    animation: none;
+    will-change: auto;
+  }
+}

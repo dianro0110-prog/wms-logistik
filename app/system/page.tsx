@@ -1,9 +1,11 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+
 import {
-  Warehouse,
   ArrowLeftCircle,
   PackagePlus,
   PackageCheck,
@@ -18,6 +20,7 @@ import {
   UserCircle,
   LogOut,
 } from "lucide-react";
+
 import Sidebar from "../../components/Sidebar";
 import { supabase } from "../../lib/supabase";
 
@@ -53,7 +56,6 @@ export default function SystemPage() {
         return;
       }
 
-      // Jika tidak ada session berarti belum login
       if (!session?.user) {
         if (mounted) {
           router.replace("/login");
@@ -62,7 +64,6 @@ export default function SystemPage() {
         return;
       }
 
-      // User valid dan sudah login
       if (mounted) {
         const name =
           session.user.user_metadata?.full_name ||
@@ -120,27 +121,84 @@ export default function SystemPage() {
     router.replace("/login");
   };
 
+  /* ====================================================== */
+  /* ================= REUSABLE LOGO ====================== */
+  /* ====================================================== */
+
+  const AnimatedLogo = ({
+    size,
+  }: {
+    size: "desktop" | "mobile";
+  }) => {
+    const isDesktop = size === "desktop";
+
+    return (
+      <div
+        className={`
+          coin-spin-container
+          flex items-center justify-center
+          rounded-3xl bg-white
+          shadow-xl ring-4 ring-blue-100
+          ${
+            isDesktop
+              ? "h-36 w-36 sm:h-40 sm:w-40 sm:ring-8"
+              : "mx-auto h-24 w-24 rounded-2xl"
+          }
+        `}
+      >
+        <Image
+          src="/logozeewms.png"
+          alt="Zee-WMS Logo"
+          width={isDesktop ? 160 : 96}
+          height={isDesktop ? 160 : 96}
+          priority
+          className={`
+            coin-spin
+            h-full w-full
+            object-contain
+            ${isDesktop ? "rounded-3xl" : "rounded-2xl"}
+          `}
+        />
+      </div>
+    );
+  };
+
+  /* ====================================================== */
+  /* ================= REUSABLE BACK ====================== */
+  /* ====================================================== */
+
+  const BackToMenu = () => (
+    <button
+      type="button"
+      onClick={() => setMobileMenu("main")}
+      className="
+        mx-auto mt-7 flex items-center gap-2
+        rounded-xl px-4 py-2
+        text-sm font-medium text-slate-500
+        transition hover:bg-slate-200 hover:text-slate-800
+      "
+    >
+      <ArrowLeft size={17} />
+      Kembali ke Menu
+    </button>
+  );
+
+  /* ====================================================== */
+  /* ======================= RENDER ======================== */
+  /* ====================================================== */
+
   return (
     <div className="flex min-h-screen bg-slate-100">
-
-      {/* ================================================== */}
       {/* ===================== SIDEBAR ==================== */}
-      {/* ================================================== */}
 
-      {/* Hanya tampil di WEB / DESKTOP */}
       <div className="hidden md:block">
         <Sidebar />
       </div>
 
-      {/* ================================================== */}
       {/* ================= MAIN CONTENT =================== */}
-      {/* ================================================== */}
 
       <main className="relative flex-1 overflow-hidden p-3 sm:p-5 md:p-6">
-
-        {/* ================================================== */}
-        {/* ================= BACKGROUND GRID ================= */}
-        {/* ================================================== */}
+        {/* BACKGROUND GRID */}
 
         <div
           className="pointer-events-none absolute inset-0 opacity-60"
@@ -161,145 +219,36 @@ export default function SystemPage() {
           }}
         />
 
-        {/* ================================================== */}
-        {/* ================= BACK BUTTON ==================== */}
-        {/* ================================================== */}
-
-        {/* Hanya tampil di DESKTOP */}
+        {/* ================= BACK BUTTON =================== */}
 
         <button
           type="button"
           onClick={() => router.push("/welcome")}
           className="
-            relative
-            z-20
-            group
-            mb-4
-            hidden
-            items-center
-            gap-1.5
-            rounded-lg
-            border
-            border-slate-200
-            bg-gray-600
-            px-3
-            py-2
-            text-sm
-            font-medium
-            text-white
-            shadow-sm
-            transition-all
-            duration-200
-            hover:bg-slate-50
-            hover:text-slate-700
-            hover:shadow-md
-            sm:mb-5
-            sm:gap-2
-            sm:rounded-xl
-            sm:px-4
-            sm:py-2.5
-            sm:text-base
-            md:flex
+            relative z-20 group mb-4 hidden
+            items-center gap-1.5 rounded-lg
+            border border-slate-200 bg-gray-600
+            px-3 py-2 text-sm font-medium text-white
+            shadow-sm transition-all duration-200
+            hover:bg-slate-50 hover:text-slate-700
+            hover:shadow-md sm:mb-5 sm:gap-2
+            sm:rounded-xl sm:px-4 sm:py-2.5
+            sm:text-base md:flex
           "
         >
           <ArrowLeftCircle
             size={17}
             className="
-              transition-transform
-              duration-200
+              transition-transform duration-200
               group-hover:-translate-x-1
-              sm:h-[19px]
-              sm:w-[19px]
+              sm:h-[19px] sm:w-[19px]
             "
           />
 
           <span>Kembali</span>
         </button>
 
-        {/* ====================================================== */}
-        {/* ================= DESKTOP VERSION ==================== */}
-        {/* ====================================================== */}
-
-        <div
-          className="
-            pointer-events-none
-            absolute
-            inset-0
-            hidden
-            items-center
-            justify-center
-            px-5
-            md:flex
-          "
-        >
-          <div className="flex w-full max-w-md flex-col items-center justify-center">
-
-            {/* LOGO */}
-
-            <div
-              className="
-                flex
-                h-20
-                w-20
-                items-center
-                justify-center
-                rounded-2xl
-                bg-blue-950
-                shadow-xl
-                ring-6
-                ring-blue-100
-                sm:h-24
-                sm:w-24
-                sm:rounded-3xl
-                sm:ring-8
-              "
-            >
-              <Warehouse
-                size={44}
-                strokeWidth={1.7}
-                className="text-white sm:h-[54px] sm:w-[54px]"
-              />
-            </div>
-
-            {/* ZEE-WMS */}
-
-            <h1
-              className="
-                mt-5
-                text-3xl
-                font-extrabold
-                tracking-[0.16em]
-                text-blue-950
-                sm:mt-6
-                sm:text-4xl
-                sm:tracking-[0.22em]
-                md:text-5xl
-              "
-            >
-              Zee-WMS
-            </h1>
-
-            {/* SUBTITLE */}
-
-            <p
-              className="
-                mt-2
-                text-center
-                text-[9px]
-                font-medium
-                uppercase
-                tracking-[0.18em]
-                text-slate-500
-                sm:text-xs
-                sm:tracking-[0.28em]
-                md:text-sm
-              "
-            >
-              Warehouse Management System
-            </p>
-
-          </div>
-        </div>
+      
 
         {/* ====================================================== */}
         {/* ================= MOBILE VERSION ===================== */}
@@ -307,53 +256,29 @@ export default function SystemPage() {
 
         <div
           className="
-            relative
-            z-10
-            flex
-            min-h-[calc(100vh-40px)]
-            flex-col
-            justify-center
-            px-2
-            md:hidden
+            relative z-10 flex min-h-[calc(100vh-40px)]
+            flex-col justify-center px-2 md:hidden
           "
         >
-
-          {/* ================================================== */}
           {/* ================= MAIN MOBILE ==================== */}
-          {/* ================================================== */}
 
           {mobileMenu === "main" && (
             <>
-              {/* ================================================== */}
-              {/* ============== MOBILE USER TOP RIGHT ============== */}
-              {/* ================================================== */}
+              {/* USER TOP RIGHT */}
 
               <div
                 className="
-                  absolute
-                  right-0
-                  top-0
-                  z-50
-                  flex
-                  items-center
-                  gap-1.5
+                  absolute right-0 top-0 z-50
+                  flex items-center gap-1.5
                 "
               >
-
                 {/* USER NAME */}
 
                 <div
                   className="
-                    flex
-                    items-center
-                    gap-1.5
-                    rounded-full
-                    border
-                    border-slate-200
-                    bg-white
-                    px-2.5
-                    py-1.5
-                    shadow-sm
+                    flex items-center gap-1.5
+                    rounded-full border border-slate-200
+                    bg-white px-2.5 py-1.5 shadow-sm
                   "
                 >
                   <UserCircle
@@ -364,11 +289,8 @@ export default function SystemPage() {
 
                   <span
                     className="
-                      max-w-[110px]
-                      truncate
-                      text-[11px]
-                      font-bold
-                      text-slate-700
+                      max-w-[110px] truncate
+                      text-[11px] font-bold text-slate-700
                     "
                   >
                     {userName}
@@ -381,66 +303,28 @@ export default function SystemPage() {
                   type="button"
                   onClick={handleLogout}
                   title="Logout"
+                  aria-label="Logout"
                   className="
-                    flex
-                    h-8
-                    w-8
-                    items-center
-                    justify-center
-                    rounded-full
-                    border
-                    border-red-100
-                    bg-white
-                    text-red-500
-                    shadow-sm
-                    transition
-                    hover:bg-red-50
-                    hover:text-red-600
-                    active:scale-95
+                    flex h-8 w-8 items-center justify-center
+                    rounded-full border border-red-100
+                    bg-white text-red-500 shadow-sm
+                    transition hover:bg-red-50
+                    hover:text-red-600 active:scale-95
                   "
                 >
-                  <LogOut
-                    size={15}
-                    strokeWidth={1.8}
-                  />
+                  <LogOut size={15} strokeWidth={1.8} />
                 </button>
               </div>
 
-              {/* ================================================== */}
-              {/* ================= MOBILE HEADER ================== */}
-              {/* ================================================== */}
+              {/* MOBILE HEADER */}
 
               <div className="mb-7 text-center">
-
-                <div
-                  className="
-                    mx-auto
-                    flex
-                    h-16
-                    w-16
-                    items-center
-                    justify-center
-                    rounded-2xl
-                    bg-blue-950
-                    shadow-lg
-                    ring-4
-                    ring-blue-100
-                  "
-                >
-                  <Warehouse
-                    size={34}
-                    strokeWidth={1.7}
-                    className="text-white"
-                  />
-                </div>
+                <AnimatedLogo size="mobile" />
 
                 <h1
                   className="
-                    mt-4
-                    text-2xl
-                    font-extrabold
-                    tracking-[0.14em]
-                    text-blue-950
+                    mt-4 text-2xl font-extrabold
+                    tracking-[0.14em] text-blue-950
                   "
                 >
                   ZEE-WMS
@@ -448,76 +332,48 @@ export default function SystemPage() {
 
                 <p
                   className="
-                    mt-1
-                    text-[9px]
-                    font-semibold
-                    uppercase
-                    tracking-[0.2em]
+                    mt-1 text-[9px] font-semibold
+                    uppercase tracking-[0.2em]
                     text-slate-500
                   "
                 >
                   Warehouse Management System
                 </p>
-
               </div>
 
-              {/* ================================================== */}
-              {/* ================= MOBILE MENU ==================== */}
-              {/* ================================================== */}
+              {/* MOBILE MENU */}
 
               <div className="mx-auto w-full max-w-sm space-y-4">
-
                 {/* INBOUND */}
 
                 <button
                   type="button"
                   onClick={() => setMobileMenu("inbound")}
                   className="
-                    group
-                    flex
-                    w-full
-                    items-center
-                    gap-4
-                    rounded-2xl
-                    border
-                    border-slate-200
-                    bg-white
-                    p-4
-                    text-left
-                    shadow-md
-                    transition-all
-                    duration-200
+                    group flex w-full items-center gap-4
+                    rounded-2xl border border-slate-200
+                    bg-white p-4 text-left shadow-md
+                    transition-all duration-200
+                    hover:-translate-y-0.5 hover:shadow-lg
                     active:scale-[0.98]
-                    hover:-translate-y-0.5
-                    hover:shadow-lg
                   "
                 >
                   <div
                     className="
-                      flex
-                      h-14
-                      w-14
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      bg-blue-100
-                      text-blue-800
+                      flex h-14 w-14 shrink-0 items-center
+                      justify-center rounded-xl
+                      bg-blue-100 text-blue-800
                     "
                   >
-                    <PackagePlus
-                      size={28}
-                      strokeWidth={1.8}
-                    />
+                    <PackagePlus size={28} strokeWidth={1.8} />
                   </div>
 
                   <div>
                     <h2 className="text-base font-bold text-slate-800">
                       Inbound
                     </h2>
-
                     <p className="mt-0.5 text-xs text-slate-500">
-                      Receiving & Putaway
+                      Receiving &amp; Putaway
                     </p>
                   </div>
 
@@ -532,51 +388,30 @@ export default function SystemPage() {
                   type="button"
                   onClick={() => setMobileMenu("outbound")}
                   className="
-                    group
-                    flex
-                    w-full
-                    items-center
-                    gap-4
-                    rounded-2xl
-                    border
-                    border-slate-200
-                    bg-white
-                    p-4
-                    text-left
-                    shadow-md
-                    transition-all
-                    duration-200
+                    group flex w-full items-center gap-4
+                    rounded-2xl border border-slate-200
+                    bg-white p-4 text-left shadow-md
+                    transition-all duration-200
+                    hover:-translate-y-0.5 hover:shadow-lg
                     active:scale-[0.98]
-                    hover:-translate-y-0.5
-                    hover:shadow-lg
                   "
                 >
                   <div
                     className="
-                      flex
-                      h-14
-                      w-14
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      bg-orange-100
-                      text-orange-700
+                      flex h-14 w-14 shrink-0 items-center
+                      justify-center rounded-xl
+                      bg-orange-100 text-orange-700
                     "
                   >
-                    <PackageCheck
-                      size={28}
-                      strokeWidth={1.8}
-                    />
+                    <PackageCheck size={28} strokeWidth={1.8} />
                   </div>
 
                   <div>
                     <h2 className="text-base font-bold text-slate-800">
                       Outbound
                     </h2>
-
                     <p className="mt-0.5 text-xs text-slate-500">
-                      Allocation & Picking
+                      Allocation &amp; Picking
                     </p>
                   </div>
 
@@ -591,51 +426,30 @@ export default function SystemPage() {
                   type="button"
                   onClick={() => setMobileMenu("inventory")}
                   className="
-                    group
-                    flex
-                    w-full
-                    items-center
-                    gap-4
-                    rounded-2xl
-                    border
-                    border-slate-200
-                    bg-white
-                    p-4
-                    text-left
-                    shadow-md
-                    transition-all
-                    duration-200
+                    group flex w-full items-center gap-4
+                    rounded-2xl border border-slate-200
+                    bg-white p-4 text-left shadow-md
+                    transition-all duration-200
+                    hover:-translate-y-0.5 hover:shadow-lg
                     active:scale-[0.98]
-                    hover:-translate-y-0.5
-                    hover:shadow-lg
                   "
                 >
                   <div
                     className="
-                      flex
-                      h-14
-                      w-14
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      bg-emerald-100
-                      text-emerald-700
+                      flex h-14 w-14 shrink-0 items-center
+                      justify-center rounded-xl
+                      bg-emerald-100 text-emerald-700
                     "
                   >
-                    <Boxes
-                      size={28}
-                      strokeWidth={1.8}
-                    />
+                    <Boxes size={28} strokeWidth={1.8} />
                   </div>
 
                   <div>
                     <h2 className="text-base font-bold text-slate-800">
                       Inventory
                     </h2>
-
                     <p className="mt-0.5 text-xs text-slate-500">
-                      Stock & Location
+                      Stock &amp; Location
                     </p>
                   </div>
 
@@ -650,51 +464,30 @@ export default function SystemPage() {
                   type="button"
                   onClick={() => setMobileMenu("counting")}
                   className="
-                    group
-                    flex
-                    w-full
-                    items-center
-                    gap-4
-                    rounded-2xl
-                    border
-                    border-slate-200
-                    bg-white
-                    p-4
-                    text-left
-                    shadow-md
-                    transition-all
-                    duration-200
+                    group flex w-full items-center gap-4
+                    rounded-2xl border border-slate-200
+                    bg-white p-4 text-left shadow-md
+                    transition-all duration-200
+                    hover:-translate-y-0.5 hover:shadow-lg
                     active:scale-[0.98]
-                    hover:-translate-y-0.5
-                    hover:shadow-lg
                   "
                 >
                   <div
                     className="
-                      flex
-                      h-14
-                      w-14
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      bg-purple-100
-                      text-purple-700
+                      flex h-14 w-14 shrink-0 items-center
+                      justify-center rounded-xl
+                      bg-purple-100 text-purple-700
                     "
                   >
-                    <ClipboardList
-                      size={28}
-                      strokeWidth={1.8}
-                    />
+                    <ClipboardList size={28} strokeWidth={1.8} />
                   </div>
 
                   <div>
                     <h2 className="text-base font-bold text-slate-800">
                       Counting
                     </h2>
-
                     <p className="mt-0.5 text-xs text-slate-500">
-                      Stock Opname & Counting
+                      Stock Opname &amp; Counting
                     </p>
                   </div>
 
@@ -702,7 +495,6 @@ export default function SystemPage() {
                     ›
                   </span>
                 </button>
-
               </div>
 
               {/* MOBILE FOOTER */}
@@ -713,34 +505,19 @@ export default function SystemPage() {
             </>
           )}
 
-          {/* ================================================== */}
           {/* ================= INBOUND MOBILE ================= */}
-          {/* ================================================== */}
 
           {mobileMenu === "inbound" && (
             <>
               <div className="mb-7 text-center">
-
                 <div
                   className="
-                    mx-auto
-                    flex
-                    h-16
-                    w-16
-                    items-center
-                    justify-center
-                    rounded-2xl
-                    bg-blue-950
-                    text-white
-                    shadow-lg
-                    ring-4
-                    ring-blue-100
+                    mx-auto flex h-16 w-16 items-center
+                    justify-center rounded-2xl bg-blue-950
+                    text-white shadow-lg ring-4 ring-blue-100
                   "
                 >
-                  <PackagePlus
-                    size={34}
-                    strokeWidth={1.7}
-                  />
+                  <PackagePlus size={34} strokeWidth={1.7} />
                 </div>
 
                 <h1 className="mt-4 text-2xl font-extrabold text-blue-950">
@@ -748,63 +525,39 @@ export default function SystemPage() {
                 </h1>
 
                 <p className="mt-1 text-xs text-slate-500">
-                  Receiving & Putaway
+                  Receiving &amp; Putaway
                 </p>
-
               </div>
 
               <div className="mx-auto w-full max-w-sm space-y-4">
-
                 {/* CHECKING */}
 
                 <button
                   type="button"
-                  onClick={() =>
-                    router.push("/inbound/checking")
-                  }
+                  onClick={() => router.push("/inbound/checking")}
                   className="
-                    flex
-                    w-full
-                    items-center
-                    gap-4
-                    rounded-2xl
-                    border
-                    border-slate-200
-                    bg-white
-                    p-4
-                    text-left
-                    shadow-md
-                    transition-all
-                    active:scale-[0.98]
-                    hover:shadow-lg
+                    flex w-full items-center gap-4 rounded-2xl
+                    border border-slate-200 bg-white p-4
+                    text-left shadow-md transition-all
+                    hover:shadow-lg active:scale-[0.98]
                   "
                 >
                   <div
                     className="
-                      flex
-                      h-14
-                      w-14
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      bg-blue-100
-                      text-blue-800
+                      flex h-14 w-14 shrink-0 items-center
+                      justify-center rounded-xl
+                      bg-blue-100 text-blue-800
                     "
                   >
-                    <ClipboardCheck
-                      size={28}
-                      strokeWidth={1.8}
-                    />
+                    <ClipboardCheck size={28} strokeWidth={1.8} />
                   </div>
 
                   <div>
                     <h2 className="text-base font-bold text-slate-800">
                       Checking
                     </h2>
-
                     <p className="mt-0.5 text-xs text-slate-500">
-                      Receiving & Checking
+                      Receiving &amp; Checking
                     </p>
                   </div>
 
@@ -817,52 +570,30 @@ export default function SystemPage() {
 
                 <button
                   type="button"
-                  onClick={() =>
-                    router.push("/inbound/putaway")
-                  }
+                  onClick={() => router.push("/inbound/putaway")}
                   className="
-                    flex
-                    w-full
-                    items-center
-                    gap-4
-                    rounded-2xl
-                    border
-                    border-slate-200
-                    bg-white
-                    p-4
-                    text-left
-                    shadow-md
-                    transition-all
-                    active:scale-[0.98]
-                    hover:shadow-lg
+                    flex w-full items-center gap-4 rounded-2xl
+                    border border-slate-200 bg-white p-4
+                    text-left shadow-md transition-all
+                    hover:shadow-lg active:scale-[0.98]
                   "
                 >
                   <div
                     className="
-                      flex
-                      h-14
-                      w-14
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      bg-indigo-100
-                      text-indigo-700
+                      flex h-14 w-14 shrink-0 items-center
+                      justify-center rounded-xl
+                      bg-indigo-100 text-indigo-700
                     "
                   >
-                    <PackageOpen
-                      size={28}
-                      strokeWidth={1.8}
-                    />
+                    <PackageOpen size={28} strokeWidth={1.8} />
                   </div>
 
                   <div>
                     <h2 className="text-base font-bold text-slate-800">
                       Putaway
                     </h2>
-
                     <p className="mt-0.5 text-xs text-slate-500">
-                      Putaway & Location
+                      Putaway &amp; Location
                     </p>
                   </div>
 
@@ -870,67 +601,25 @@ export default function SystemPage() {
                     ›
                   </span>
                 </button>
-
               </div>
 
-              {/* BACK */}
-
-              <button
-                type="button"
-                onClick={() =>
-                  setMobileMenu("main")
-                }
-                className="
-                  mx-auto
-                  mt-7
-                  flex
-                  items-center
-                  gap-2
-                  rounded-xl
-                  px-4
-                  py-2
-                  text-sm
-                  font-medium
-                  text-slate-500
-                  transition
-                  hover:bg-slate-200
-                  hover:text-slate-800
-                "
-              >
-                <ArrowLeft size={17} />
-                Kembali ke Menu
-              </button>
+              <BackToMenu />
             </>
           )}
 
-          {/* ================================================== */}
           {/* ================= OUTBOUND MOBILE ================ */}
-          {/* ================================================== */}
 
           {mobileMenu === "outbound" && (
             <>
               <div className="mb-7 text-center">
-
                 <div
                   className="
-                    mx-auto
-                    flex
-                    h-16
-                    w-16
-                    items-center
-                    justify-center
-                    rounded-2xl
-                    bg-orange-600
-                    text-white
-                    shadow-lg
-                    ring-4
-                    ring-orange-100
+                    mx-auto flex h-16 w-16 items-center
+                    justify-center rounded-2xl bg-orange-600
+                    text-white shadow-lg ring-4 ring-orange-100
                   "
                 >
-                  <PackageCheck
-                    size={34}
-                    strokeWidth={1.7}
-                  />
+                  <PackageCheck size={34} strokeWidth={1.7} />
                 </div>
 
                 <h1 className="mt-4 text-2xl font-extrabold text-orange-700">
@@ -938,61 +627,37 @@ export default function SystemPage() {
                 </h1>
 
                 <p className="mt-1 text-xs text-slate-500">
-                  Picking & Packing
+                  Picking &amp; Packing
                 </p>
-
               </div>
 
               <div className="mx-auto w-full max-w-sm space-y-4">
-
                 {/* PICKING */}
 
                 <button
                   type="button"
-                  onClick={() =>
-                    router.push("/outbound/picking")
-                  }
+                  onClick={() => router.push("/outbound/picking")}
                   className="
-                    flex
-                    w-full
-                    items-center
-                    gap-4
-                    rounded-2xl
-                    border
-                    border-slate-200
-                    bg-white
-                    p-4
-                    text-left
-                    shadow-md
-                    transition-all
-                    active:scale-[0.98]
-                    hover:shadow-lg
+                    flex w-full items-center gap-4 rounded-2xl
+                    border border-slate-200 bg-white p-4
+                    text-left shadow-md transition-all
+                    hover:shadow-lg active:scale-[0.98]
                   "
                 >
                   <div
                     className="
-                      flex
-                      h-14
-                      w-14
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      bg-orange-100
-                      text-orange-700
+                      flex h-14 w-14 shrink-0 items-center
+                      justify-center rounded-xl
+                      bg-orange-100 text-orange-700
                     "
                   >
-                    <ScanLine
-                      size={28}
-                      strokeWidth={1.8}
-                    />
+                    <ScanLine size={28} strokeWidth={1.8} />
                   </div>
 
                   <div>
                     <h2 className="text-base font-bold text-slate-800">
                       Picking
                     </h2>
-
                     <p className="mt-0.5 text-xs text-slate-500">
                       Picking Order
                     </p>
@@ -1007,50 +672,28 @@ export default function SystemPage() {
 
                 <button
                   type="button"
-                  onClick={() =>
-                    router.push("/outbound/packing")
-                  }
+                  onClick={() => router.push("/outbound/packing")}
                   className="
-                    flex
-                    w-full
-                    items-center
-                    gap-4
-                    rounded-2xl
-                    border
-                    border-slate-200
-                    bg-white
-                    p-4
-                    text-left
-                    shadow-md
-                    transition-all
-                    active:scale-[0.98]
-                    hover:shadow-lg
+                    flex w-full items-center gap-4 rounded-2xl
+                    border border-slate-200 bg-white p-4
+                    text-left shadow-md transition-all
+                    hover:shadow-lg active:scale-[0.98]
                   "
                 >
                   <div
                     className="
-                      flex
-                      h-14
-                      w-14
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      bg-amber-100
-                      text-amber-700
+                      flex h-14 w-14 shrink-0 items-center
+                      justify-center rounded-xl
+                      bg-amber-100 text-amber-700
                     "
                   >
-                    <Box
-                      size={28}
-                      strokeWidth={1.8}
-                    />
+                    <Box size={28} strokeWidth={1.8} />
                   </div>
 
                   <div>
                     <h2 className="text-base font-bold text-slate-800">
                       Packing
                     </h2>
-
                     <p className="mt-0.5 text-xs text-slate-500">
                       Packing Order
                     </p>
@@ -1060,67 +703,25 @@ export default function SystemPage() {
                     ›
                   </span>
                 </button>
-
               </div>
 
-              {/* BACK */}
-
-              <button
-                type="button"
-                onClick={() =>
-                  setMobileMenu("main")
-                }
-                className="
-                  mx-auto
-                  mt-7
-                  flex
-                  items-center
-                  gap-2
-                  rounded-xl
-                  px-4
-                  py-2
-                  text-sm
-                  font-medium
-                  text-slate-500
-                  transition
-                  hover:bg-slate-200
-                  hover:text-slate-800
-                "
-              >
-                <ArrowLeft size={17} />
-                Kembali ke Menu
-              </button>
+              <BackToMenu />
             </>
           )}
 
-          {/* ================================================== */}
           {/* ================= INVENTORY MOBILE =============== */}
-          {/* ================================================== */}
 
           {mobileMenu === "inventory" && (
             <>
               <div className="mb-7 text-center">
-
                 <div
                   className="
-                    mx-auto
-                    flex
-                    h-16
-                    w-16
-                    items-center
-                    justify-center
-                    rounded-2xl
-                    bg-emerald-600
-                    text-white
-                    shadow-lg
-                    ring-4
-                    ring-emerald-100
+                    mx-auto flex h-16 w-16 items-center
+                    justify-center rounded-2xl bg-emerald-600
+                    text-white shadow-lg ring-4 ring-emerald-100
                   "
                 >
-                  <Boxes
-                    size={34}
-                    strokeWidth={1.7}
-                  />
+                  <Boxes size={34} strokeWidth={1.7} />
                 </div>
 
                 <h1 className="mt-4 text-2xl font-extrabold text-emerald-700">
@@ -1128,61 +729,37 @@ export default function SystemPage() {
                 </h1>
 
                 <p className="mt-1 text-xs text-slate-500">
-                  Stock & Location
+                  Stock &amp; Location
                 </p>
-
               </div>
 
               <div className="mx-auto w-full max-w-sm">
-
                 {/* MOVEMENT */}
 
                 <button
                   type="button"
-                  onClick={() =>
-                    router.push("/inventory/movement")
-                  }
+                  onClick={() => router.push("/inventory/movement")}
                   className="
-                    flex
-                    w-full
-                    items-center
-                    gap-4
-                    rounded-2xl
-                    border
-                    border-slate-200
-                    bg-white
-                    p-4
-                    text-left
-                    shadow-md
-                    transition-all
-                    active:scale-[0.98]
-                    hover:shadow-lg
+                    flex w-full items-center gap-4 rounded-2xl
+                    border border-slate-200 bg-white p-4
+                    text-left shadow-md transition-all
+                    hover:shadow-lg active:scale-[0.98]
                   "
                 >
                   <div
                     className="
-                      flex
-                      h-14
-                      w-14
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      bg-emerald-100
-                      text-emerald-700
+                      flex h-14 w-14 shrink-0 items-center
+                      justify-center rounded-xl
+                      bg-emerald-100 text-emerald-700
                     "
                   >
-                    <MoveRight
-                      size={28}
-                      strokeWidth={1.8}
-                    />
+                    <MoveRight size={28} strokeWidth={1.8} />
                   </div>
 
                   <div>
                     <h2 className="text-base font-bold text-slate-800">
                       Movement
                     </h2>
-
                     <p className="mt-0.5 text-xs text-slate-500">
                       Stock Movement
                     </p>
@@ -1192,69 +769,25 @@ export default function SystemPage() {
                     ›
                   </span>
                 </button>
-
               </div>
 
-              {/* BACK */}
-
-              <button
-                type="button"
-                onClick={() =>
-                  setMobileMenu("main")
-                }
-                className="
-                  mx-auto
-                  mt-7
-                  flex
-                  items-center
-                  gap-2
-                  rounded-xl
-                  px-4
-                  py-2
-                  text-sm
-                  font-medium
-                  text-slate-500
-                  transition
-                  hover:bg-slate-200
-                  hover:text-slate-800
-                "
-              >
-                <ArrowLeft size={17} />
-                Kembali ke Menu
-              </button>
+              <BackToMenu />
             </>
           )}
 
-          {/* ================================================== */}
           {/* ================= COUNTING MOBILE ================ */}
-          {/* ================================================== */}
 
           {mobileMenu === "counting" && (
             <>
-              {/* ================= COUNTING HEADER ================= */}
-
               <div className="mb-7 text-center">
-
                 <div
                   className="
-                    mx-auto
-                    flex
-                    h-16
-                    w-16
-                    items-center
-                    justify-center
-                    rounded-2xl
-                    bg-purple-600
-                    text-white
-                    shadow-lg
-                    ring-4
-                    ring-purple-100
+                    mx-auto flex h-16 w-16 items-center
+                    justify-center rounded-2xl bg-purple-600
+                    text-white shadow-lg ring-4 ring-purple-100
                   "
                 >
-                  <ClipboardList
-                    size={34}
-                    strokeWidth={1.7}
-                  />
+                  <ClipboardList size={34} strokeWidth={1.7} />
                 </div>
 
                 <h1 className="mt-4 text-2xl font-extrabold text-purple-700">
@@ -1262,63 +795,37 @@ export default function SystemPage() {
                 </h1>
 
                 <p className="mt-1 text-xs text-slate-500">
-                  Stock Opname & Counting
+                  Stock Opname &amp; Counting
                 </p>
-
               </div>
 
-              {/* ================= COUNTING SUBMENU ================= */}
-
               <div className="mx-auto w-full max-w-sm space-y-4">
-
-                {/* ================= FIRST COUNT ================= */}
+                {/* FIRST COUNT */}
 
                 <button
                   type="button"
-                  onClick={() =>
-                    router.push("/counting/firstcount")
-                  }
+                  onClick={() => router.push("/counting/firstcount")}
                   className="
-                    flex
-                    w-full
-                    items-center
-                    gap-4
-                    rounded-2xl
-                    border
-                    border-slate-200
-                    bg-white
-                    p-4
-                    text-left
-                    shadow-md
-                    transition-all
-                    active:scale-[0.98]
-                    hover:shadow-lg
+                    flex w-full items-center gap-4 rounded-2xl
+                    border border-slate-200 bg-white p-4
+                    text-left shadow-md transition-all
+                    hover:shadow-lg active:scale-[0.98]
                   "
                 >
                   <div
                     className="
-                      flex
-                      h-14
-                      w-14
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      bg-purple-100
-                      text-purple-700
+                      flex h-14 w-14 shrink-0 items-center
+                      justify-center rounded-xl
+                      bg-purple-100 text-purple-700
                     "
                   >
-                    <ClipboardList
-                      size={28}
-                      strokeWidth={1.8}
-                    />
+                    <ClipboardList size={28} strokeWidth={1.8} />
                   </div>
 
                   <div>
                     <h2 className="text-base font-bold text-slate-800">
                       First Count
                     </h2>
-
                     <p className="mt-0.5 text-xs text-slate-500">
                       Perhitungan Stock Awal
                     </p>
@@ -1329,54 +836,32 @@ export default function SystemPage() {
                   </span>
                 </button>
 
-                {/* ================= SECOND COUNT ================= */}
+                {/* SECOND COUNT */}
 
                 <button
                   type="button"
-                  onClick={() =>
-                    router.push("/counting/secondcount")
-                  }
+                  onClick={() => router.push("/counting/secondcount")}
                   className="
-                    flex
-                    w-full
-                    items-center
-                    gap-4
-                    rounded-2xl
-                    border
-                    border-slate-200
-                    bg-white
-                    p-4
-                    text-left
-                    shadow-md
-                    transition-all
-                    active:scale-[0.98]
-                    hover:shadow-lg
+                    flex w-full items-center gap-4 rounded-2xl
+                    border border-slate-200 bg-white p-4
+                    text-left shadow-md transition-all
+                    hover:shadow-lg active:scale-[0.98]
                   "
                 >
                   <div
                     className="
-                      flex
-                      h-14
-                      w-14
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      bg-indigo-100
-                      text-indigo-700
+                      flex h-14 w-14 shrink-0 items-center
+                      justify-center rounded-xl
+                      bg-indigo-100 text-indigo-700
                     "
                   >
-                    <ClipboardCheck
-                      size={28}
-                      strokeWidth={1.8}
-                    />
+                    <ClipboardCheck size={28} strokeWidth={1.8} />
                   </div>
 
                   <div>
                     <h2 className="text-base font-bold text-slate-800">
                       Second Count
                     </h2>
-
                     <p className="mt-0.5 text-xs text-slate-500">
                       Perhitungan Ulang Stock
                     </p>
@@ -1387,54 +872,32 @@ export default function SystemPage() {
                   </span>
                 </button>
 
-                {/* ================= THIRD COUNT ================= */}
+                {/* THIRD COUNT */}
 
                 <button
                   type="button"
-                  onClick={() =>
-                    router.push("/counting/thirdcount")
-                  }
+                  onClick={() => router.push("/counting/thirdcount")}
                   className="
-                    flex
-                    w-full
-                    items-center
-                    gap-4
-                    rounded-2xl
-                    border
-                    border-slate-200
-                    bg-white
-                    p-4
-                    text-left
-                    shadow-md
-                    transition-all
-                    active:scale-[0.98]
-                    hover:shadow-lg
+                    flex w-full items-center gap-4 rounded-2xl
+                    border border-slate-200 bg-white p-4
+                    text-left shadow-md transition-all
+                    hover:shadow-lg active:scale-[0.98]
                   "
                 >
                   <div
                     className="
-                      flex
-                      h-14
-                      w-14
-                      shrink-0
-                      items-center
-                      justify-center
-                      rounded-xl
-                      bg-violet-100
-                      text-violet-700
+                      flex h-14 w-14 shrink-0 items-center
+                      justify-center rounded-xl
+                      bg-violet-100 text-violet-700
                     "
                   >
-                    <PackageCheck
-                      size={28}
-                      strokeWidth={1.8}
-                    />
+                    <PackageCheck size={28} strokeWidth={1.8} />
                   </div>
 
                   <div>
                     <h2 className="text-base font-bold text-slate-800">
                       Third Count
                     </h2>
-
                     <p className="mt-0.5 text-xs text-slate-500">
                       Finalisasi Hasil Counting
                     </p>
@@ -1444,40 +907,11 @@ export default function SystemPage() {
                     ›
                   </span>
                 </button>
-
               </div>
 
-              {/* ================= BACK ================= */}
-
-              <button
-                type="button"
-                onClick={() =>
-                  setMobileMenu("main")
-                }
-                className="
-                  mx-auto
-                  mt-7
-                  flex
-                  items-center
-                  gap-2
-                  rounded-xl
-                  px-4
-                  py-2
-                  text-sm
-                  font-medium
-                  text-slate-500
-                  transition
-                  hover:bg-slate-200
-                  hover:text-slate-800
-                "
-              >
-                <ArrowLeft size={17} />
-                Kembali ke Menu
-              </button>
-
+              <BackToMenu />
             </>
           )}
-
         </div>
       </main>
     </div>
