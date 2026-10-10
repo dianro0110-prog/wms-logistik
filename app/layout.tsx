@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   themeColor: "#7c3aed",
   icons: {
     icon: "/Zee Warehouse Management Logo",
-    apple: "/Zee Warehouse Management Logo.png",
+    apple: "/logizeewms.png",
   },
 };
 
