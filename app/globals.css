@@ -211,3 +211,23 @@
     will-change: auto;
   }
 }
+
+
+
+/* Animasi logo berputar seperti koin */
+.coin-logo {
+  animation: zeeCoinFlip 3s linear infinite;
+  transform-style: preserve-3d;
+  backface-visibility: visible;
+  will-change: transform;
+}
+
+@keyframes zeeCoinFlip {
+  0% {
+    transform: perspective(600px) rotateY(0deg);
+  }
+
+  100% {
+    transform: perspective(600px) rotateY(360deg);
+  }
+}

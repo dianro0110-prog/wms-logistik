@@ -97,16 +97,16 @@ export default function MobileLogin({
   }}
 >
   <img
-    src="/logozeewms.png"
-    alt="Zee-WMS Logo"
-    width={72}
-    height={72}
-    style={{
-      width: "100%",
-      height: "100%",
-      objectFit: "contain",
-    }}
-  />
+  src="/logozeewms.png"
+  alt="Zee-WMS Logo"
+  width={72}
+  height={72}
+  className="coin-logo"
+  style={{
+    objectFit: "contain",
+    display: "block",
+  }}
+/>
 </div>
         </div>
 
