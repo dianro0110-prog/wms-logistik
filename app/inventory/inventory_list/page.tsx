@@ -1,202 +1,218 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
-import { supabase } from "../../../lib/supabase";
-import { ArrowLeftCircle } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import * as XLSX from "xlsx";
+import {
+  Download,
+  RefreshCw,
+  Search,
+  Package,
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  SlidersHorizontal,
+  ArrowLeft,
+} from "lucide-react";
+import { supabase } from "@/lib/supabase";
+
+type InventoryRecord = {
+  id: string;
+  sku: string;
+  location: string;
+  quantity: number | null;
+};
+
+type AllocationRecord = {
+  sku: string;
+  location: string;
+  qty_allocated?: number | null;
+  qty_picked?: number | null;
+  allocated_quantity?: number | null;
+  picked_quantity?: number | null;
+  allocated?: number | null;
+  picked?: number | null;
+};
+
+type AdjustmentRecord = {
+  inventory_id: string;
+  adjustment_type: string;
+  quantity: number | null;
+};
 
 type InventoryRow = {
-  id?: number;
+  id: string;
   sku: string;
-  deskripsi: string;
-  quantity: number;
   location: string;
-  created_at?: string;
-
-  // Dari allocation
+  stock: number;
+  adjustment_in: number;
+  adjustment_out: number;
+  net_adjustment: number;
   qty_allocated: number;
   qty_picked: number;
   qty_reserved: number;
   available_qty: number;
 };
 
-export default function InventoryListPage() {
+function toNumber(value: unknown): number {
+  const result = Number(value ?? 0);
+  return Number.isFinite(result) ? result : 0;
+}
+
+function formatNumber(value: number): string {
+  return new Intl.NumberFormat("id-ID", {
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+function SummaryCard({
+  title,
+  value,
+  icon,
+}: {
+  title: string;
+  value: number;
+  icon: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs leading-4 text-gray-500">{title}</span>
+        <span className="shrink-0 text-gray-400">{icon}</span>
+      </div>
+      <div className="mt-1 text-xl font-semibold text-gray-900">
+        {formatNumber(value)}
+      </div>
+    </div>
+  );
+}
+
+export default function InventoryPage() {
   const router = useRouter();
 
-  const [data, setData] = useState<InventoryRow[]>([]);
-  const [filtered, setFiltered] = useState<InventoryRow[]>([]);
-
+  const [inventory, setInventory] = useState<InventoryRow[]>([]);
   const [search, setSearch] = useState("");
-  const [skuFilter, setSkuFilter] = useState("");
-  const [locationFilter, setLocationFilter] = useState("");
-
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  // =====================================================
-  // LOAD INVENTORY + ALLOCATION
-  // =====================================================
-  async function loadInventory() {
+  const loadInventory = useCallback(async () => {
+    setLoading(true);
+    setError("");
+
     try {
-      setLoading(true);
+      const [
+        { data: inventoryData, error: inventoryError },
+        { data: allocationData, error: allocationError },
+        { data: adjustmentData, error: adjustmentError },
+      ] = await Promise.all([
+        supabase
+          .from("inventory")
+          .select("id, sku, location, quantity")
+          .order("sku", { ascending: true }),
 
-      // =================================================
-      // 1. BACA INVENTORY
-      // =================================================
-      const {
-        data: inventoryData,
-        error: inventoryError,
-      } = await supabase
-        .from("inventory")
-        .select(
-          "id, sku, deskripsi, quantity, location, created_at"
-        )
-        .order("location", {
-          ascending: true,
-        });
+        supabase.from("allocation").select("*"),
 
-      if (inventoryError) {
-        console.error(
-          "Inventory error:",
-          inventoryError
-        );
+        supabase
+          .from("inventory_adjustments")
+          .select("inventory_id, adjustment_type, quantity"),
+      ]);
 
-        alert(inventoryError.message);
-        return;
-      }
+      if (inventoryError) throw inventoryError;
+      if (allocationError) throw allocationError;
+      if (adjustmentError) throw adjustmentError;
 
-      // =================================================
-      // 2. BACA ALLOCATION
-      // =================================================
-      const {
-        data: allocationData,
-        error: allocationError,
-      } = await supabase
-        .from("allocation")
-        .select(
-          "sku, location, qty_allocated, qty_picked"
-        );
+      const inventoryRecords = (inventoryData ?? []) as InventoryRecord[];
+      const allocationRecords = (allocationData ?? []) as AllocationRecord[];
+      const adjustmentRecords = (adjustmentData ?? []) as AdjustmentRecord[];
 
-      if (allocationError) {
-        console.error(
-          "Allocation error:",
-          allocationError
-        );
-
-        alert(allocationError.message);
-        return;
-      }
-
-      // =================================================
-      // 3. BUAT MAP ALLOCATION
-      //
-      // Key:
-      // SKU + LOCATION
-      //
-      // Karena satu SKU/location bisa mempunyai
-      // beberapa order allocation.
-      // =================================================
-      const allocationMap: Record<
+      const allocationMap = new Map<
         string,
-        {
-          qtyAllocated: number;
-          qtyPicked: number;
-        }
-      > = {};
+        { allocated: number; picked: number }
+      >();
 
-      (allocationData || []).forEach((allocation) => {
-        const sku =
-          allocation.sku?.trim() || "";
+      for (const item of allocationRecords) {
+        const sku = String(item.sku ?? "");
+        const location = String(item.location ?? "");
+        const key = `${sku}|||${location}`;
 
-        const location =
-          allocation.location?.trim() || "";
-
-        const key =
-          `${sku.toUpperCase()}|||${location.toUpperCase()}`;
-
-        if (!allocationMap[key]) {
-          allocationMap[key] = {
-            qtyAllocated: 0,
-            qtyPicked: 0,
-          };
-        }
-
-        allocationMap[key].qtyAllocated +=
-          Number(
-            allocation.qty_allocated || 0
-          );
-
-        allocationMap[key].qtyPicked +=
-          Number(
-            allocation.qty_picked || 0
-          );
-      });
-
-      // =================================================
-      // 4. GABUNGKAN INVENTORY + ALLOCATION
-      // =================================================
-      const result: InventoryRow[] = (
-        inventoryData || []
-      ).map((inventory) => {
-        const sku =
-          inventory.sku?.trim() || "";
-
-        const location =
-          inventory.location?.trim() || "";
-
-        const key =
-          `${sku.toUpperCase()}|||${location.toUpperCase()}`;
-
-        const allocation =
-          allocationMap[key] || {
-            qtyAllocated: 0,
-            qtyPicked: 0,
-          };
-
-        const inventoryQty =
-          Number(inventory.quantity || 0);
-
-        const qtyAllocated =
-          allocation.qtyAllocated;
-
-        const qtyPicked =
-          allocation.qtyPicked;
-
-        // =================================================
-        // QTY YANG MASIH DI-RESERVE
-        //
-        // Allocated 30
-        // Picked    10
-        // Reserved  20
-        // =================================================
-        const qtyReserved = Math.max(
-          qtyAllocated - qtyPicked,
-          0
+        const allocated = toNumber(
+          item.qty_allocated ??
+            item.allocated_quantity ??
+            item.allocated
         );
 
-        // =================================================
-        // STOK YANG MASIH BEBAS DIALOKASIKAN
-        //
-        // Inventory 100
-        // Reserved   20
-        // Available  80
-        // =================================================
-        const availableQty = Math.max(
-          inventoryQty - qtyReserved,
-          0
+        const picked = toNumber(
+          item.qty_picked ??
+            item.picked_quantity ??
+            item.picked
         );
+
+        const current = allocationMap.get(key) ?? {
+          allocated: 0,
+          picked: 0,
+        };
+
+        current.allocated += allocated;
+        current.picked += picked;
+
+        allocationMap.set(key, current);
+      }
+
+      const adjustmentMap = new Map<
+        string,
+        { incoming: number; outgoing: number }
+      >();
+
+      for (const adjustment of adjustmentRecords) {
+        const inventoryId = String(adjustment.inventory_id ?? "");
+        const type = String(adjustment.adjustment_type ?? "").toUpperCase();
+        const quantity = toNumber(adjustment.quantity);
+
+        const current = adjustmentMap.get(inventoryId) ?? {
+          incoming: 0,
+          outgoing: 0,
+        };
+
+        if (type === "IN") {
+          current.incoming += quantity;
+        } else if (type === "OUT") {
+          current.outgoing += quantity;
+        }
+
+        adjustmentMap.set(inventoryId, current);
+      }
+
+      const rows: InventoryRow[] = inventoryRecords
+  .filter((item) => toNumber(item.quantity) !== 0)
+  .map((item) => {
+        const id = String(item.id);
+        const sku = String(item.sku ?? "");
+        const location = String(item.location ?? "");
+        const stock = toNumber(item.quantity);
+
+        const allocation = allocationMap.get(`${sku}|||${location}`) ?? {
+          allocated: 0,
+          picked: 0,
+        };
+
+        const adjustment = adjustmentMap.get(id) ?? {
+          incoming: 0,
+          outgoing: 0,
+        };
+
+        const qtyAllocated = allocation.allocated;
+        const qtyPicked = allocation.picked;
+        const qtyReserved = Math.max(qtyAllocated - qtyPicked, 0);
+        const availableQty = Math.max(stock - qtyReserved, 0);
 
         return {
-          id: inventory.id,
+          id,
           sku,
-          deskripsi:
-            inventory.deskripsi || "",
-          quantity: inventoryQty,
           location,
-          created_at:
-            inventory.created_at || "",
-
+          stock,
+          adjustment_in: adjustment.incoming,
+          adjustment_out: adjustment.outgoing,
+          net_adjustment: adjustment.incoming - adjustment.outgoing,
           qty_allocated: qtyAllocated,
           qty_picked: qtyPicked,
           qty_reserved: qtyReserved,
@@ -204,593 +220,382 @@ export default function InventoryListPage() {
         };
       });
 
-      setData(result);
-      setFiltered(result);
-    } catch (error) {
-      console.error(
-        "Load inventory error:",
-        error
-      );
-
-      alert(
-        "Gagal mengambil data inventory."
+      setInventory(rows);
+    } catch (err) {
+      console.error("Gagal memuat inventory:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Terjadi kesalahan saat memuat inventory."
       );
     } finally {
       setLoading(false);
     }
-  }
-
-  // =====================================================
-  // INITIAL LOAD
-  // =====================================================
-  useEffect(() => {
-    loadInventory();
   }, []);
 
-  // =====================================================
-  // FILTER
-  // =====================================================
   useEffect(() => {
-    let result = [...data];
+    void loadInventory();
+  }, [loadInventory]);
 
-    const q = search
-      .trim()
-      .toLowerCase();
+  const filteredInventory = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
 
-    if (q) {
-      result = result.filter(
-        (item) =>
-          item.sku
-            ?.toLowerCase()
-            .includes(q) ||
-          item.location
-            ?.toLowerCase()
-            .includes(q) ||
-          item.deskripsi
-            ?.toLowerCase()
-            .includes(q)
-      );
-    }
+    if (!keyword) return inventory;
 
-    if (skuFilter.trim()) {
-      const sku =
-        skuFilter
-          .trim()
-          .toLowerCase();
-
-      result = result.filter((item) =>
-        item.sku
-          ?.toLowerCase()
-          .includes(sku)
-      );
-    }
-
-    if (locationFilter.trim()) {
-      const location =
-        locationFilter
-          .trim()
-          .toLowerCase();
-
-      result = result.filter((item) =>
-        item.location
-          ?.toLowerCase()
-          .includes(location)
-      );
-    }
-
-    setFiltered(result);
-  }, [
-    search,
-    skuFilter,
-    locationFilter,
-    data,
-  ]);
-
-  // =====================================================
-  // GROUP DATA BY SKU
-  // =====================================================
-  const grouped = filtered
-    .filter(
-      (item) =>
-        Number(item.quantity) > 0
-    )
-    .reduce((acc: any, item) => {
-      const key = item.sku;
-
-      if (!acc[key]) {
-        acc[key] = {
-          sku: item.sku,
-          deskripsi: item.deskripsi,
-
-          // TOTAL INVENTORY
-          totalQty: 0,
-
-          // TOTAL ALLOCATION
-          totalAllocated: 0,
-
-          // TOTAL PICKED
-          totalPicked: 0,
-
-          // TOTAL RESERVED
-          totalReserved: 0,
-
-          // TOTAL AVAILABLE
-          totalAvailable: 0,
-
-          locations: new Set<string>(),
-          rows: [],
-        };
-      }
-
-      acc[key].totalQty +=
-        Number(item.quantity || 0);
-
-      acc[key].totalAllocated +=
-        Number(
-          item.qty_allocated || 0
-        );
-
-      acc[key].totalPicked +=
-        Number(
-          item.qty_picked || 0
-        );
-
-      acc[key].totalReserved +=
-        Number(
-          item.qty_reserved || 0
-        );
-
-      acc[key].totalAvailable +=
-        Number(
-          item.available_qty || 0
-        );
-
-      acc[key].locations.add(
-        item.location
-      );
-
-      acc[key].rows.push(item);
-
-      return acc;
-    }, {});
-
-  const result = Object.values(grouped);
-
-  // =====================================================
-  // TOTAL
-  // =====================================================
-  const totalInventory = result.reduce(
-    (sum: number, item: any) =>
-      sum + item.totalQty,
-    0
-  );
-
-  const totalAllocated = result.reduce(
-    (sum: number, item: any) =>
-      sum + item.totalAllocated,
-    0
-  );
-
-  const totalReserved = result.reduce(
-    (sum: number, item: any) =>
-      sum + item.totalReserved,
-    0
-  );
-
-  const totalAvailable = result.reduce(
-    (sum: number, item: any) =>
-      sum + item.totalAvailable,
-    0
-  );
-
-  // =====================================================
-  // EXPORT EXCEL
-  // =====================================================
-  const exportToExcel = () => {
-    const exportData: any[] = [];
-
-    filtered.forEach((row) => {
-      exportData.push({
-        SKU: row.sku,
-        Description: row.deskripsi,
-        Location: row.location,
-
-        "Inventory Qty":
-          row.quantity,
-
-        "Qty Allocated":
-          row.qty_allocated,
-
-        "Qty Picked":
-          row.qty_picked,
-
-        "Qty Reserved":
-          row.qty_reserved,
-
-        "Available Qty":
-          row.available_qty,
-
-        Created_At:
-          row.created_at,
-      });
-    });
-
-    if (exportData.length === 0) {
-      alert(
-        "Tidak ada data untuk di-download."
-      );
-      return;
-    }
-
-    const worksheet =
-      XLSX.utils.json_to_sheet(
-        exportData
-      );
-
-    const workbook =
-      XLSX.utils.book_new();
-
-    XLSX.utils.book_append_sheet(
-      workbook,
-      worksheet,
-      "Inventory"
+    return inventory.filter(
+      (row) =>
+        row.sku.toLowerCase().includes(keyword) ||
+        row.location.toLowerCase().includes(keyword)
     );
+  }, [inventory, search]);
+
+  const summary = useMemo(() => {
+    return filteredInventory.reduce(
+      (total, row) => {
+        total.stock += row.stock;
+        total.adjustmentIn += row.adjustment_in;
+        total.adjustmentOut += row.adjustment_out;
+        total.netAdjustment += row.net_adjustment;
+        total.allocated += row.qty_allocated;
+        total.picked += row.qty_picked;
+        total.reserved += row.qty_reserved;
+        total.available += row.available_qty;
+        return total;
+      },
+      {
+        stock: 0,
+        adjustmentIn: 0,
+        adjustmentOut: 0,
+        netAdjustment: 0,
+        allocated: 0,
+        picked: 0,
+        reserved: 0,
+        available: 0,
+      }
+    );
+  }, [filteredInventory]);
+
+  const exportToExcel = () => {
+    const exportData = filteredInventory.map((row) => ({
+      SKU: row.sku,
+      Location: row.location,
+      Stock: row.stock,
+      "Adjustment IN": row.adjustment_in,
+      "Adjustment OUT": row.adjustment_out,
+      "Net Adjustment": row.net_adjustment,
+      Allocated: row.qty_allocated,
+      Picked: row.qty_picked,
+      Reserved: row.qty_reserved,
+      Available: row.available_qty,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Inventory");
 
     XLSX.writeFile(
       workbook,
-      "inventory.xlsx"
+      `inventory-${new Date().toISOString().slice(0, 10)}.xlsx`
     );
   };
 
-  // =====================================================
-  // RETURN
-  // =====================================================
   return (
-    <div className="min-h-screen bg-slate-50 p-6">
+    <div className="space-y-5 p-4 md:p-6">
+      {/* Header dan tombol kembali */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="mt-1 inline-flex shrink-0 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <ArrowLeft size={16} />
+            Kembali
+          </button>
 
-      {/* =================================================
-          HEADER
-      ================================================= */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">
-            Inventory List
-          </h1>
-
-          <p className="text-gray-500">
-            Current warehouse stock
-          </p>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Inventory List
+            </h1>
+            <p className="mt-1 text-sm text-gray-500">
+              Ringkasan stok, adjustment, dan ketersediaan inventory.
+            </p>
+          </div>
         </div>
 
-        <div className="flex gap-2">
-
+        <div className="flex flex-wrap gap-2">
           <button
-            onClick={() =>
-              router.back()
-            }
-            className="flex items-center gap-2 bg-gray-500 text-white px-3 py-2 rounded-lg hover:bg-gray-600 transition"
+            type="button"
+            onClick={() => void loadInventory()}
+            disabled={loading}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
           >
-            <ArrowLeftCircle
-              size={20}
+            <RefreshCw
+              size={16}
+              className={loading ? "animate-spin" : ""}
             />
-
-            Back
+            Refresh
           </button>
 
           <button
+            type="button"
             onClick={exportToExcel}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
+            disabled={loading || filteredInventory.length === 0}
+            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            📥 Download Excel
+            <Download size={16} />
+            Export Excel
           </button>
-
         </div>
       </div>
 
-      {/* =================================================
-          SUMMARY
-      ================================================= */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-
-        {/* INVENTORY */}
-        <div className="bg-white p-4 rounded-xl shadow">
-          <div className="text-gray-500 text-sm">
-            Total Inventory
-          </div>
-
-          <div className="text-2xl font-bold text-blue-600">
-            {totalInventory}
-          </div>
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <p className="font-semibold">Gagal memuat inventory</p>
+          <p className="mt-1 break-words">{error}</p>
         </div>
+      )}
 
-        {/* ALLOCATED */}
-        <div className="bg-white p-4 rounded-xl shadow">
-          <div className="text-gray-500 text-sm">
-            Total Allocated
-          </div>
-
-          <div className="text-2xl font-bold text-orange-600">
-            {totalAllocated}
-          </div>
-        </div>
-
-        {/* RESERVED */}
-        <div className="bg-white p-4 rounded-xl shadow">
-          <div className="text-gray-500 text-sm">
-            Still Reserved
-          </div>
-
-          <div className="text-2xl font-bold text-red-600">
-            {totalReserved}
-          </div>
-        </div>
-
-        {/* AVAILABLE */}
-        <div className="bg-white p-4 rounded-xl shadow">
-          <div className="text-gray-500 text-sm">
-            Available Stock
-          </div>
-
-          <div className="text-2xl font-bold text-green-600">
-            {totalAvailable}
-          </div>
-        </div>
-
-      </div>
-
-      {/* =================================================
-          FILTER
-      ================================================= */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
-
-        <input
-          className="border p-2 rounded-lg bg-white"
-          placeholder="Search SKU / Location / Description..."
-          value={search}
-          onChange={(e) =>
-            setSearch(
-              e.target.value
-            )
-          }
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-8">
+        <SummaryCard
+          title="Total Stock"
+          value={summary.stock}
+          icon={<Package size={17} />}
         />
-
-        <input
-          className="border p-2 rounded-lg bg-white"
-          placeholder="Filter SKU"
-          value={skuFilter}
-          onChange={(e) =>
-            setSkuFilter(
-              e.target.value
-            )
-          }
+        <SummaryCard
+          title="Adjustment IN"
+          value={summary.adjustmentIn}
+          icon={<ArrowDownToLine size={17} />}
         />
-
-        <input
-          className="border p-2 rounded-lg bg-white"
-          placeholder="Filter Location"
-          value={locationFilter}
-          onChange={(e) =>
-            setLocationFilter(
-              e.target.value
-            )
-          }
+        <SummaryCard
+          title="Adjustment OUT"
+          value={summary.adjustmentOut}
+          icon={<ArrowUpFromLine size={17} />}
         />
-
+        <SummaryCard
+          title="Net Adjustment"
+          value={summary.netAdjustment}
+          icon={<SlidersHorizontal size={17} />}
+        />
+        <SummaryCard
+          title="Allocated"
+          value={summary.allocated}
+          icon={<Package size={17} />}
+        />
+        <SummaryCard
+          title="Picked"
+          value={summary.picked}
+          icon={<Package size={17} />}
+        />
+        <SummaryCard
+          title="Reserved"
+          value={summary.reserved}
+          icon={<Package size={17} />}
+        />
+        <SummaryCard
+          title="Available"
+          value={summary.available}
+          icon={<Package size={17} />}
+        />
       </div>
 
-      {/* =================================================
-          TABLE
-      ================================================= */}
-      <div className="w-full overflow-x-auto bg-white shadow rounded-xl">
+      {/* Search */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full sm:max-w-sm">
+          <Search
+            size={17}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+          />
+          <input
+            type="text"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Cari SKU atau lokasi..."
+            className="w-full rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+          />
+        </div>
 
-        <table className="min-w-[1500px] w-full text-sm border-collapse">
-
-          <thead className="bg-slate-200 sticky top-0 z-10">
-
-            <tr>
-
-              <th className="border p-3 text-left">
-                SKU
-              </th>
-
-              <th className="border p-3 text-left">
-                Description
-              </th>
-
-              <th className="border p-3 text-center">
-                Inventory
-              </th>
-
-              <th className="border p-3 text-center">
-                Allocated
-              </th>
-
-              <th className="border p-3 text-center">
-                Picked
-              </th>
-
-              <th className="border p-3 text-center">
-                Reserved
-              </th>
-
-              <th className="border p-3 text-center">
-                Available
-              </th>
-
-              <th className="border p-3 text-left">
-                Locations
-              </th>
-
-              <th className="border p-3 text-left">
-                Detail Rows
-              </th>
-
-            </tr>
-
-          </thead>
-
-          <tbody>
-
-            {loading ? (
-
-              <tr>
-                <td
-                  colSpan={9}
-                  className="text-center p-10"
-                >
-                  Loading inventory...
-                </td>
-              </tr>
-
-            ) : result.length === 0 ? (
-
-              <tr>
-                <td
-                  colSpan={9}
-                  className="text-center p-10 text-gray-500"
-                >
-                  Tidak ada data inventory
-                </td>
-              </tr>
-
-            ) : (
-
-              result.map(
-                (item: any, i) => (
-
-                  <tr
-                    key={i}
-                    className="hover:bg-slate-50"
-                  >
-
-                    {/* SKU */}
-                    <td className="border p-3 font-semibold whitespace-nowrap">
-                      {item.sku}
-                    </td>
-
-                    {/* DESCRIPTION */}
-                    <td className="border p-3 min-w-[300px]">
-                      {item.deskripsi ||
-                        "-"}
-                    </td>
-
-                    {/* INVENTORY */}
-                    <td className="border p-3 text-center font-bold text-blue-600">
-                      {item.totalQty}
-                    </td>
-
-                    {/* ALLOCATED */}
-                    <td className="border p-3 text-center font-bold text-orange-600">
-                      {item.totalAllocated}
-                    </td>
-
-                    {/* PICKED */}
-                    <td className="border p-3 text-center font-bold text-purple-600">
-                      {item.totalPicked}
-                    </td>
-
-                    {/* RESERVED */}
-                    <td className="border p-3 text-center font-bold text-red-600">
-                      {item.totalReserved}
-                    </td>
-
-                    {/* AVAILABLE */}
-                    <td className="border p-3 text-center font-bold text-green-600">
-                      {item.totalAvailable}
-                    </td>
-
-                    {/* LOCATIONS */}
-                    <td className="border p-3 whitespace-nowrap">
-                      {[
-                        ...item.locations,
-                      ].join(" | ")}
-                    </td>
-
-                    {/* DETAIL */}
-                    <td className="border p-3">
-
-                      <div className="max-h-40 overflow-y-auto text-xs space-y-1">
-
-                        {item.rows.map(
-                          (
-                            r: InventoryRow,
-                            idx: number
-                          ) => (
-
-                            <div
-                              key={idx}
-                              className="border-b py-2"
-                            >
-
-                              <div className="grid grid-cols-5 gap-2">
-
-                                <span className="font-medium">
-                                  {r.location}
-                                </span>
-
-                                <span>
-                                  Stock:
-                                  {" "}
-                                  <b>
-                                    {r.quantity}
-                                  </b>
-                                </span>
-
-                                <span className="text-orange-600">
-                                  Alloc:
-                                  {" "}
-                                  <b>
-                                    {
-                                      r.qty_allocated
-                                    }
-                                  </b>
-                                </span>
-
-                                <span className="text-red-600">
-                                  Reserved:
-                                  {" "}
-                                  <b>
-                                    {
-                                      r.qty_reserved
-                                    }
-                                  </b>
-                                </span>
-
-                                <span className="text-green-600">
-                                  Available:
-                                  {" "}
-                                  <b>
-                                    {
-                                      r.available_qty
-                                    }
-                                  </b>
-                                </span>
-
-                              </div>
-
-                            </div>
-
-                          )
-                        )}
-
-                      </div>
-
-                    </td>
-
-                  </tr>
-
-                )
-              )
-
-            )}
-
-          </tbody>
-
-        </table>
-
+        <p className="text-sm text-gray-500">
+          {filteredInventory.length} baris inventory
+        </p>
       </div>
 
+      {/* Inventory table */}
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        {loading ? (
+          <div className="p-10 text-center text-sm text-gray-500">
+            Memuat data inventory...
+          </div>
+        ) : filteredInventory.length === 0 ? (
+          <div className="p-10 text-center text-sm text-gray-500">
+            Data inventory tidak ditemukan.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px] border-collapse text-sm">
+              <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">SKU</th>
+                  <th className="px-4 py-3 font-semibold">Location</th>
+                  <th className="px-4 py-3 text-right font-semibold">Stock</th>
+                  <th className="px-4 py-3 text-right font-semibold">
+                    Adjustment IN
+                  </th>
+                  <th className="px-4 py-3 text-right font-semibold">
+                    Adjustment OUT
+                  </th>
+                  <th className="px-4 py-3 text-right font-semibold">
+                    Net Adjustment
+                  </th>
+
+                  {/* Kolom Allocated dan Picked hanya untuk proses aktif */}
+                  {filteredInventory.some(
+                    (row) => row.qty_allocated > row.qty_picked
+                  ) && (
+                    <>
+                      <th className="px-4 py-3 text-right font-semibold">
+                        Allocated
+                      </th>
+                      <th className="px-4 py-3 text-right font-semibold">
+                        Picked
+                      </th>
+                    </>
+                  )}
+
+                 
+                  <th className="px-4 py-3 text-right font-semibold">
+                    Available
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-gray-100">
+                {filteredInventory.map((row) => {
+                  const hasActiveAllocation =
+                    row.qty_allocated > row.qty_picked;
+
+                  return (
+                    <tr
+                      key={row.id}
+                      className="transition-colors hover:bg-gray-50"
+                    >
+                      <td className="whitespace-nowrap px-4 py-3 font-medium text-gray-900">
+                        {row.sku || "-"}
+                      </td>
+
+                      <td className="whitespace-nowrap px-4 py-3 text-gray-600">
+                        {row.location || "-"}
+                      </td>
+
+                      <td className="px-4 py-3 text-right font-semibold text-gray-900">
+                        {formatNumber(row.stock)}
+                      </td>
+
+                      <td className="px-4 py-3 text-right text-green-700">
+                        {row.adjustment_in > 0
+                          ? `+${formatNumber(row.adjustment_in)}`
+                          : "-"}
+                      </td>
+
+                      <td className="px-4 py-3 text-right text-red-700">
+                        {row.adjustment_out > 0
+                          ? `-${formatNumber(row.adjustment_out)}`
+                          : "-"}
+                      </td>
+
+                      <td
+                        className={`px-4 py-3 text-right font-medium ${
+                          row.net_adjustment > 0
+                            ? "text-green-700"
+                            : row.net_adjustment < 0
+                              ? "text-red-700"
+                              : "text-gray-400"
+                        }`}
+                      >
+                        {row.net_adjustment > 0 ? "+" : ""}
+                        {formatNumber(row.net_adjustment)}
+                      </td>
+
+                      {filteredInventory.some(
+                        (item) => item.qty_allocated > item.qty_picked
+                      ) && (
+                        <>
+                          <td className="px-4 py-3 text-right">
+                            {hasActiveAllocation
+                              ? formatNumber(row.qty_allocated)
+                              : "-"}
+                          </td>
+
+                          <td className="px-4 py-3 text-right">
+                            {hasActiveAllocation
+                              ? formatNumber(row.qty_picked)
+                              : "-"}
+                          </td>
+                        </>
+                      )}
+
+                      
+
+                      <td className="px-4 py-3 text-right font-semibold text-blue-700">
+                        {row.available_qty !== 0
+                          ? formatNumber(row.available_qty)
+                          : "-"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+
+              <tfoot className="border-t-2 border-gray-200 bg-gray-50 font-semibold text-gray-900">
+                <tr>
+                  <td className="px-4 py-3" colSpan={2}>
+                    Total
+                  </td>
+
+                  <td className="px-4 py-3 text-right">
+                    {formatNumber(summary.stock)}
+                  </td>
+
+                  <td className="px-4 py-3 text-right text-green-700">
+                    {formatNumber(summary.adjustmentIn)}
+                  </td>
+
+                  <td className="px-4 py-3 text-right text-red-700">
+                    {formatNumber(summary.adjustmentOut)}
+                  </td>
+
+                  <td className="px-4 py-3 text-right">
+                    {formatNumber(summary.netAdjustment)}
+                  </td>
+
+                  {filteredInventory.some(
+                    (row) => row.qty_allocated > row.qty_picked
+                  ) && (
+                    <>
+                      <td className="px-4 py-3 text-right">
+                        {formatNumber(summary.allocated)}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {formatNumber(summary.picked)}
+                      </td>
+                    </>
+                  )}
+
+                  <td className="px-4 py-3 text-right">
+                    {formatNumber(summary.reserved)}
+                  </td>
+
+                  <td className="px-4 py-3 text-right text-blue-700">
+                    {formatNumber(summary.available)}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

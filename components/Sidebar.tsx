@@ -280,6 +280,13 @@ const handleLogout = async () => {
     >
       Movement List
     </Link>
+
+    <Link
+      href="/inventory/adjustment"
+      className="block px-3 py-2 hover:bg-slate-300 rounded"
+    >
+      Adjustment
+    </Link>
   </div>
 )}
 

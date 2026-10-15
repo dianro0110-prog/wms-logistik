@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.wms.logistik',
-  appName: 'WMS Logistik',
+  appName: 'Zee Wms',
   webDir: 'www',
   server: {
   url: "https://wms-warehouse.vercel.app",
